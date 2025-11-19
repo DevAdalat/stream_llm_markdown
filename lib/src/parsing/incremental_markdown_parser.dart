@@ -179,15 +179,8 @@ class IncrementalMarkdownParser {
           }
           quoteLines.add(content);
           j++;
-        } else if (currentLine.trim().isEmpty) {
-          // Empty line - check if next line continues the blockquote
-          if (j + 1 < lines.length && lines[j + 1].startsWith('>')) {
-            quoteLines.add('');
-            j++;
-          } else {
-            break;
-          }
         } else {
+          // Any non-blockquote line (including empty lines) ends the blockquote
           break;
         }
       }

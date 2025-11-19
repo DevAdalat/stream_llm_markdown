@@ -200,10 +200,14 @@ class InlineSpanBuilder {
             code = code.substring(1, code.length - 1);
           }
           
-          final codeStyle = baseStyle.copyWith(
-            fontFamily: 'monospace',
-            backgroundColor: theme.codeTheme?.backgroundColor?.withValues(alpha: 0.3),
-          );
+          // Use theme's inline code style if available
+          final themeCodeStyle = theme.inlineCodeStyle;
+          final codeStyle = themeCodeStyle != null
+              ? baseStyle.merge(themeCodeStyle)
+              : baseStyle.copyWith(
+                  fontFamily: 'monospace',
+                  backgroundColor: theme.codeTheme?.backgroundColor?.withValues(alpha: 0.3),
+                );
           
           return _ParseResult(
             TextSpan(text: code, style: codeStyle),
@@ -323,10 +327,14 @@ class InlineSpanBuilder {
 
     final url = text.substring(urlStart, i);
     
-    final linkStyle = baseStyle.copyWith(
-      color: theme.linkColor ?? const Color(0xFF2563EB),
-      decoration: TextDecoration.underline,
-    );
+    // Use theme's link style if available
+    final themeLinkStyle = theme.linkStyle;
+    final linkStyle = themeLinkStyle != null
+        ? baseStyle.merge(themeLinkStyle)
+        : baseStyle.copyWith(
+            color: theme.linkColor ?? const Color(0xFF2563EB),
+            decoration: TextDecoration.underline,
+          );
 
     TapGestureRecognizer? recognizer;
     if (onLinkTapped != null) {
@@ -373,10 +381,14 @@ class InlineSpanBuilder {
         ? 'mailto:$content' 
         : content;
 
-    final linkStyle = baseStyle.copyWith(
-      color: theme.linkColor ?? const Color(0xFF2563EB),
-      decoration: TextDecoration.underline,
-    );
+    // Use theme's link style if available
+    final themeLinkStyle = theme.linkStyle;
+    final linkStyle = themeLinkStyle != null
+        ? baseStyle.merge(themeLinkStyle)
+        : baseStyle.copyWith(
+            color: theme.linkColor ?? const Color(0xFF2563EB),
+            decoration: TextDecoration.underline,
+          );
 
     TapGestureRecognizer? recognizer;
     if (onLinkTapped != null) {
@@ -407,10 +419,18 @@ class InlineSpanBuilder {
     while (i + 2 < text.length) {
       if (text[i] == marker && text[i + 1] == marker && text[i + 2] == marker) {
         final content = text.substring(start + 3, i);
-        final boldItalicStyle = baseStyle.copyWith(
-          fontWeight: FontWeight.bold,
-          fontStyle: FontStyle.italic,
-        );
+        // Merge both bold and italic styles from theme
+        var boldItalicStyle = baseStyle;
+        if (theme.boldStyle != null) {
+          boldItalicStyle = boldItalicStyle.merge(theme.boldStyle);
+        } else {
+          boldItalicStyle = boldItalicStyle.copyWith(fontWeight: FontWeight.bold);
+        }
+        if (theme.italicStyle != null) {
+          boldItalicStyle = boldItalicStyle.merge(theme.italicStyle);
+        } else {
+          boldItalicStyle = boldItalicStyle.copyWith(fontStyle: FontStyle.italic);
+        }
         
         final nestedSpans = _parseInline(content, boldItalicStyle, theme, onLinkTapped);
         
@@ -445,7 +465,10 @@ class InlineSpanBuilder {
         }
         
         final content = text.substring(start + 2, i);
-        final boldStyle = baseStyle.copyWith(fontWeight: FontWeight.bold);
+        // Use theme's bold style if available
+        final boldStyle = theme.boldStyle != null
+            ? baseStyle.merge(theme.boldStyle!)
+            : baseStyle.copyWith(fontWeight: FontWeight.bold);
         
         final nestedSpans = _parseInline(content, boldStyle, theme, onLinkTapped);
         
@@ -485,7 +508,10 @@ class InlineSpanBuilder {
         final content = text.substring(start + 1, i);
         if (content.isEmpty) return null;
         
-        final italicStyle = baseStyle.copyWith(fontStyle: FontStyle.italic);
+        // Use theme's italic style if available
+        final italicStyle = theme.italicStyle != null
+            ? baseStyle.merge(theme.italicStyle!)
+            : baseStyle.copyWith(fontStyle: FontStyle.italic);
         
         final nestedSpans = _parseInline(content, italicStyle, theme, onLinkTapped);
         
@@ -513,9 +539,10 @@ class InlineSpanBuilder {
     while (i + 1 < text.length) {
       if (text[i] == '~' && text[i + 1] == '~') {
         final content = text.substring(start + 2, i);
-        final strikeStyle = baseStyle.copyWith(
-          decoration: TextDecoration.lineThrough,
-        );
+        // Use theme's strikethrough style if available
+        final strikeStyle = theme.strikethroughStyle != null
+            ? baseStyle.merge(theme.strikethroughStyle!)
+            : baseStyle.copyWith(decoration: TextDecoration.lineThrough);
         
         final nestedSpans = _parseInline(content, strikeStyle, theme, onLinkTapped);
         

@@ -6,13 +6,21 @@ class MarkdownTheme {
   /// Creates a new Markdown theme.
   const MarkdownTheme({
     this.textStyle,
+    this.fontFamily,
+    this.linkStyle,
     this.linkColor,
+    this.inlineCodeStyle,
+    this.boldStyle,
+    this.italicStyle,
+    this.strikethroughStyle,
     this.headerTheme,
     this.codeTheme,
     this.blockquoteTheme,
     this.tableTheme,
     this.listTheme,
+    this.horizontalRuleTheme,
     this.blockSpacing,
+    this.paragraphSpacing,
   });
 
   /// Creates a default light theme.
@@ -23,13 +31,28 @@ class MarkdownTheme {
         color: Color(0xFF1F2937),
         height: 1.6,
       ),
+      linkStyle: const TextStyle(
+        color: Color(0xFF2563EB),
+        decoration: TextDecoration.underline,
+      ),
       linkColor: const Color(0xFF2563EB),
+      inlineCodeStyle: const TextStyle(
+        fontFamily: 'monospace',
+        fontSize: 14,
+        color: Color(0xFFE11D48),
+        backgroundColor: Color(0xFFF3F4F6),
+      ),
+      boldStyle: const TextStyle(fontWeight: FontWeight.bold),
+      italicStyle: const TextStyle(fontStyle: FontStyle.italic),
+      strikethroughStyle: const TextStyle(decoration: TextDecoration.lineThrough),
       headerTheme: const HeaderTheme(),
       codeTheme: CodeBlockTheme.light(),
       blockquoteTheme: const BlockquoteTheme(),
       tableTheme: const TableTheme(),
       listTheme: const ListTheme(),
+      horizontalRuleTheme: const HorizontalRuleTheme(),
       blockSpacing: 16,
+      paragraphSpacing: 1.6,
     );
   }
 
@@ -41,21 +64,54 @@ class MarkdownTheme {
         color: Color(0xFFF3F4F6),
         height: 1.6,
       ),
+      linkStyle: const TextStyle(
+        color: Color(0xFF60A5FA),
+        decoration: TextDecoration.underline,
+      ),
       linkColor: const Color(0xFF60A5FA),
+      inlineCodeStyle: const TextStyle(
+        fontFamily: 'monospace',
+        fontSize: 14,
+        color: Color(0xFFF472B6),
+        backgroundColor: Color(0xFF374151),
+      ),
+      boldStyle: const TextStyle(fontWeight: FontWeight.bold),
+      italicStyle: const TextStyle(fontStyle: FontStyle.italic),
+      strikethroughStyle: const TextStyle(decoration: TextDecoration.lineThrough),
       headerTheme: HeaderTheme.dark(),
       codeTheme: CodeBlockTheme.dark(),
       blockquoteTheme: BlockquoteTheme.dark(),
       tableTheme: TableTheme.dark(),
       listTheme: ListTheme.dark(),
+      horizontalRuleTheme: HorizontalRuleTheme.dark(),
       blockSpacing: 16,
+      paragraphSpacing: 1.6,
     );
   }
 
   /// Base text style for paragraphs.
   final TextStyle? textStyle;
 
-  /// Color for links.
+  /// Default font family for all text (can be overridden per element).
+  final String? fontFamily;
+
+  /// Style for links (color, decoration, etc.).
+  final TextStyle? linkStyle;
+
+  /// Color for links (legacy, use linkStyle instead).
   final Color? linkColor;
+
+  /// Style for inline code.
+  final TextStyle? inlineCodeStyle;
+
+  /// Style for bold text.
+  final TextStyle? boldStyle;
+
+  /// Style for italic text.
+  final TextStyle? italicStyle;
+
+  /// Style for strikethrough text.
+  final TextStyle? strikethroughStyle;
 
   /// Theme for headers.
   final HeaderTheme? headerTheme;
@@ -72,44 +128,74 @@ class MarkdownTheme {
   /// Theme for lists.
   final ListTheme? listTheme;
 
+  /// Theme for horizontal rules.
+  final HorizontalRuleTheme? horizontalRuleTheme;
+
   /// Spacing between blocks.
   final double? blockSpacing;
+
+  /// Line spacing within paragraphs.
+  final double? paragraphSpacing;
 
   /// Returns this theme with defaults applied.
   MarkdownTheme withDefaults() {
     final defaultTheme = MarkdownTheme.light();
     return MarkdownTheme(
       textStyle: textStyle ?? defaultTheme.textStyle,
+      fontFamily: fontFamily ?? defaultTheme.fontFamily,
+      linkStyle: linkStyle ?? defaultTheme.linkStyle,
       linkColor: linkColor ?? defaultTheme.linkColor,
+      inlineCodeStyle: inlineCodeStyle ?? defaultTheme.inlineCodeStyle,
+      boldStyle: boldStyle ?? defaultTheme.boldStyle,
+      italicStyle: italicStyle ?? defaultTheme.italicStyle,
+      strikethroughStyle: strikethroughStyle ?? defaultTheme.strikethroughStyle,
       headerTheme: headerTheme ?? defaultTheme.headerTheme,
       codeTheme: codeTheme ?? defaultTheme.codeTheme,
       blockquoteTheme: blockquoteTheme ?? defaultTheme.blockquoteTheme,
       tableTheme: tableTheme ?? defaultTheme.tableTheme,
       listTheme: listTheme ?? defaultTheme.listTheme,
+      horizontalRuleTheme: horizontalRuleTheme ?? defaultTheme.horizontalRuleTheme,
       blockSpacing: blockSpacing ?? defaultTheme.blockSpacing,
+      paragraphSpacing: paragraphSpacing ?? defaultTheme.paragraphSpacing,
     );
   }
 
   /// Creates a copy with modified fields.
   MarkdownTheme copyWith({
     TextStyle? textStyle,
+    String? fontFamily,
+    TextStyle? linkStyle,
     Color? linkColor,
+    TextStyle? inlineCodeStyle,
+    TextStyle? boldStyle,
+    TextStyle? italicStyle,
+    TextStyle? strikethroughStyle,
     HeaderTheme? headerTheme,
     CodeBlockTheme? codeTheme,
     BlockquoteTheme? blockquoteTheme,
     TableTheme? tableTheme,
     ListTheme? listTheme,
+    HorizontalRuleTheme? horizontalRuleTheme,
     double? blockSpacing,
+    double? paragraphSpacing,
   }) {
     return MarkdownTheme(
       textStyle: textStyle ?? this.textStyle,
+      fontFamily: fontFamily ?? this.fontFamily,
+      linkStyle: linkStyle ?? this.linkStyle,
       linkColor: linkColor ?? this.linkColor,
+      inlineCodeStyle: inlineCodeStyle ?? this.inlineCodeStyle,
+      boldStyle: boldStyle ?? this.boldStyle,
+      italicStyle: italicStyle ?? this.italicStyle,
+      strikethroughStyle: strikethroughStyle ?? this.strikethroughStyle,
       headerTheme: headerTheme ?? this.headerTheme,
       codeTheme: codeTheme ?? this.codeTheme,
       blockquoteTheme: blockquoteTheme ?? this.blockquoteTheme,
       tableTheme: tableTheme ?? this.tableTheme,
       listTheme: listTheme ?? this.listTheme,
+      horizontalRuleTheme: horizontalRuleTheme ?? this.horizontalRuleTheme,
       blockSpacing: blockSpacing ?? this.blockSpacing,
+      paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
     );
   }
 }
@@ -522,18 +608,24 @@ class ListTheme {
   /// Creates a new list theme.
   const ListTheme({
     this.bulletColor,
+    this.bulletSize,
+    this.numberStyle,
     this.checkboxCheckedColor,
     this.checkboxUncheckedColor,
+    this.checkboxSize,
     this.indentWidth,
     this.itemSpacing,
+    this.textStyle,
   });
 
   /// Creates a dark list theme.
   factory ListTheme.dark() {
     return const ListTheme(
       bulletColor: Color(0xFF9CA3AF),
+      bulletSize: 6,
       checkboxCheckedColor: Color(0xFF60A5FA),
       checkboxUncheckedColor: Color(0xFF6B7280),
+      checkboxSize: 16,
       indentWidth: 24,
       itemSpacing: 4,
     );
@@ -542,15 +634,76 @@ class ListTheme {
   /// Color for bullet points.
   final Color? bulletColor;
 
+  /// Size of bullet points.
+  final double? bulletSize;
+
+  /// Style for ordered list numbers.
+  final TextStyle? numberStyle;
+
   /// Color for checked checkboxes.
   final Color? checkboxCheckedColor;
 
   /// Color for unchecked checkboxes.
   final Color? checkboxUncheckedColor;
 
+  /// Size of checkboxes.
+  final double? checkboxSize;
+
   /// Width of each indent level.
   final double? indentWidth;
 
   /// Spacing between list items.
   final double? itemSpacing;
+
+  /// Text style for list items.
+  final TextStyle? textStyle;
+}
+
+/// Theme for horizontal rules (thematic breaks).
+@immutable
+class HorizontalRuleTheme {
+  /// Creates a new horizontal rule theme.
+  const HorizontalRuleTheme({
+    this.color,
+    this.thickness,
+    this.indent,
+    this.endIndent,
+    this.style,
+  });
+
+  /// Creates a dark horizontal rule theme.
+  factory HorizontalRuleTheme.dark() {
+    return const HorizontalRuleTheme(
+      color: Color(0xFF4B5563),
+      thickness: 1,
+      indent: 0,
+      endIndent: 0,
+      style: HorizontalRuleStyle.solid,
+    );
+  }
+
+  /// Color of the rule.
+  final Color? color;
+
+  /// Thickness of the rule.
+  final double? thickness;
+
+  /// Left indent.
+  final double? indent;
+
+  /// Right indent.
+  final double? endIndent;
+
+  /// Style of the rule (solid, dashed, dotted).
+  final HorizontalRuleStyle? style;
+}
+
+/// Style for horizontal rules.
+enum HorizontalRuleStyle {
+  /// Solid line.
+  solid,
+  /// Dashed line.
+  dashed,
+  /// Dotted line.
+  dotted,
 }
