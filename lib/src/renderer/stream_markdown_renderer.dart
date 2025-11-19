@@ -26,6 +26,8 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
     this.cursorWidth = 2.0,
     this.cursorHeight,
     this.cursorBlinkDuration = const Duration(milliseconds: 500),
+    this.scrollController,
+    this.autoScrollToBottom = true,
     super.key,
   });
 
@@ -59,6 +61,17 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
   /// Duration for cursor blink animation.
   final Duration cursorBlinkDuration;
 
+  /// ScrollController for auto-scrolling to bottom.
+  /// 
+  /// If provided, the widget will automatically scroll to the bottom
+  /// when new content is added during streaming.
+  final ScrollController? scrollController;
+
+  /// Whether to automatically scroll to bottom when new content arrives.
+  /// 
+  /// Defaults to true. Requires [scrollController] to be provided.
+  final bool autoScrollToBottom;
+
   @override
   RenderObject createRenderObject(BuildContext context) {
     return RenderStreamMarkdown(
@@ -71,6 +84,8 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
       cursorWidth: cursorWidth,
       cursorHeight: cursorHeight,
       cursorBlinkDuration: cursorBlinkDuration,
+      scrollController: scrollController,
+      autoScrollToBottom: autoScrollToBottom,
     );
   }
 
@@ -88,7 +103,9 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
       ..cursorColor = cursorColor
       ..cursorWidth = cursorWidth
       ..cursorHeight = cursorHeight
-      ..cursorBlinkDuration = cursorBlinkDuration;
+      ..cursorBlinkDuration = cursorBlinkDuration
+      ..scrollController = scrollController
+      ..autoScrollToBottom = autoScrollToBottom;
   }
 }
 
@@ -105,6 +122,8 @@ class RenderStreamMarkdown extends RenderBox {
     double cursorWidth = 2.0,
     double? cursorHeight,
     Duration cursorBlinkDuration = const Duration(milliseconds: 500),
+    ScrollController? scrollController,
+    bool autoScrollToBottom = true,
   })  : _theme = theme,
         _onLinkTapped = onLinkTapped,
         _onCheckboxTapped = onCheckboxTapped,
@@ -112,7 +131,9 @@ class RenderStreamMarkdown extends RenderBox {
         _cursorColor = cursorColor,
         _cursorWidth = cursorWidth,
         _cursorHeight = cursorHeight,
-        _cursorBlinkDuration = cursorBlinkDuration {
+        _cursorBlinkDuration = cursorBlinkDuration,
+        _scrollController = scrollController,
+        _autoScrollToBottom = autoScrollToBottom {
     _subscribeToStream(markdownStream);
   }
 
@@ -129,6 +150,21 @@ class RenderStreamMarkdown extends RenderBox {
   // Child render objects
   final List<RenderMarkdownBlock> _children = [];
   final Map<String, RenderMarkdownBlock> _childMap = {};
+
+  // Scroll controller for auto-scroll
+  ScrollController? get scrollController => _scrollController;
+  ScrollController? _scrollController;
+  set scrollController(ScrollController? value) {
+    if (_scrollController == value) return;
+    _scrollController = value;
+  }
+
+  bool get autoScrollToBottom => _autoScrollToBottom;
+  bool _autoScrollToBottom;
+  set autoScrollToBottom(bool value) {
+    if (_autoScrollToBottom == value) return;
+    _autoScrollToBottom = value;
+  }
 
   // Cursor properties
   bool get showCursor => _showCursor;
@@ -326,6 +362,27 @@ class RenderStreamMarkdown extends RenderBox {
       ..addAll(newChildMap);
 
     markNeedsLayout();
+
+    // Auto-scroll to bottom after layout
+    if (_autoScrollToBottom && _scrollController != null && _isStreaming) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
+    }
+  }
+
+  void _scrollToBottom() {
+    final controller = _scrollController;
+    if (controller == null || !controller.hasClients) return;
+    
+    final maxScroll = controller.position.maxScrollExtent;
+    if (controller.offset < maxScroll) {
+      controller.animateTo(
+        maxScroll,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   void _onError(Object error, StackTrace stackTrace) {
