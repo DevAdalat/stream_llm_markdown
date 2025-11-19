@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import '../parsing/incremental_markdown_parser.dart';
 import '../parsing/markdown_block.dart';
 import '../render_objects/base/render_markdown_block.dart';
+import '../render_objects/mixins/selectable_text_mixin.dart';
 import '../theme/markdown_theme.dart';
 import 'block_registry.dart';
 
@@ -28,8 +29,20 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
     this.cursorBlinkDuration = const Duration(milliseconds: 500),
     this.scrollController,
     this.autoScrollToBottom = true,
+    this.selectionEnabled = false, // Disabled for now - selection implementation in progress
     super.key,
   });
+
+  /// Whether text selection is enabled.
+  /// 
+  /// When true, users can select text with gestures like:
+  /// - Double-tap to select a word
+  /// - Triple-tap to select a paragraph
+  /// - Long press and drag to select text
+  /// 
+  /// This widget should be wrapped in a [SelectionArea] for full
+  /// selection support with handles and context menu.
+  final bool selectionEnabled;
 
   /// The stream of Markdown content to render.
   ///
@@ -86,6 +99,8 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
       cursorBlinkDuration: cursorBlinkDuration,
       scrollController: scrollController,
       autoScrollToBottom: autoScrollToBottom,
+      selectionRegistrar: selectionEnabled ? SelectionContainer.maybeOf(context) : null,
+      selectionEnabled: selectionEnabled,
     );
   }
 
@@ -105,7 +120,9 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
       ..cursorHeight = cursorHeight
       ..cursorBlinkDuration = cursorBlinkDuration
       ..scrollController = scrollController
-      ..autoScrollToBottom = autoScrollToBottom;
+      ..autoScrollToBottom = autoScrollToBottom
+      ..selectionRegistrar = selectionEnabled ? SelectionContainer.maybeOf(context) : null
+      ..selectionEnabled = selectionEnabled;
   }
 }
 
@@ -124,6 +141,8 @@ class RenderStreamMarkdown extends RenderBox {
     Duration cursorBlinkDuration = const Duration(milliseconds: 500),
     ScrollController? scrollController,
     bool autoScrollToBottom = true,
+    SelectionRegistrar? selectionRegistrar,
+    bool selectionEnabled = true,
   })  : _theme = theme,
         _onLinkTapped = onLinkTapped,
         _onCheckboxTapped = onCheckboxTapped,
@@ -133,7 +152,9 @@ class RenderStreamMarkdown extends RenderBox {
         _cursorHeight = cursorHeight,
         _cursorBlinkDuration = cursorBlinkDuration,
         _scrollController = scrollController,
-        _autoScrollToBottom = autoScrollToBottom {
+        _autoScrollToBottom = autoScrollToBottom,
+        _selectionRegistrar = selectionRegistrar,
+        _selectionEnabled = selectionEnabled {
     _subscribeToStream(markdownStream);
   }
 
@@ -164,6 +185,35 @@ class RenderStreamMarkdown extends RenderBox {
   set autoScrollToBottom(bool value) {
     if (_autoScrollToBottom == value) return;
     _autoScrollToBottom = value;
+  }
+
+  // Selection properties
+  SelectionRegistrar? get selectionRegistrar => _selectionRegistrar;
+  SelectionRegistrar? _selectionRegistrar;
+  set selectionRegistrar(SelectionRegistrar? value) {
+    if (_selectionRegistrar == value) return;
+    _selectionRegistrar = value;
+    // Update all children with new registrar
+    for (final child in _children) {
+      _updateChildSelectionRegistrar(child);
+    }
+  }
+
+  bool get selectionEnabled => _selectionEnabled;
+  bool _selectionEnabled;
+  set selectionEnabled(bool value) {
+    if (_selectionEnabled == value) return;
+    _selectionEnabled = value;
+    // Update all children
+    for (final child in _children) {
+      _updateChildSelectionRegistrar(child);
+    }
+  }
+
+  void _updateChildSelectionRegistrar(RenderMarkdownBlock child) {
+    if (child is SelectableTextMixin) {
+      (child as SelectableTextMixin).registrar = _selectionEnabled ? _selectionRegistrar : null;
+    }
   }
 
   // Cursor properties
@@ -317,6 +367,8 @@ class RenderStreamMarkdown extends RenderBox {
     final newChildren = <RenderMarkdownBlock>[];
     final newChildMap = <String, RenderMarkdownBlock>{};
 
+    final registrar = _selectionEnabled ? _selectionRegistrar : null;
+
     for (final block in _currentBlocks) {
       final existingChild = _childMap[block.id];
 
@@ -328,6 +380,7 @@ class RenderStreamMarkdown extends RenderBox {
           theme: _theme,
           onLinkTapped: _onLinkTapped,
           onCheckboxTapped: _onCheckboxTapped,
+          selectionRegistrar: registrar,
         );
         newChildren.add(existingChild);
         newChildMap[block.id] = existingChild;
@@ -338,6 +391,7 @@ class RenderStreamMarkdown extends RenderBox {
           theme: _theme,
           onLinkTapped: _onLinkTapped,
           onCheckboxTapped: _onCheckboxTapped,
+          selectionRegistrar: registrar,
         );
         adoptChild(child);
         newChildren.add(child);

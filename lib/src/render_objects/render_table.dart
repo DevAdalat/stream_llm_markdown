@@ -77,16 +77,29 @@ class RenderMarkdownTable extends RenderMarkdownBlock {
 
       for (var colIndex = 0; colIndex < row.length; colIndex++) {
         final isHeader = rowIndex == 0;
+        
+        // Get base text color from theme
+        final baseTextColor = theme.textStyle?.color ?? const Color(0xFF1F2937);
+        
         final cellStyle = isHeader
-            ? (_tableTheme.headerTextStyle ?? const TextStyle(
+            ? (_tableTheme.headerTextStyle ?? TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
+                color: baseTextColor,
               ))
-            : (_tableTheme.cellTextStyle ?? const TextStyle(fontSize: 14));
+            : (_tableTheme.cellTextStyle ?? TextStyle(
+                fontSize: 14,
+                color: baseTextColor,
+              ));
+        
+        // Ensure color is set if not specified in theme style
+        final styleWithColor = cellStyle.color == null 
+            ? cellStyle.copyWith(color: baseTextColor)
+            : cellStyle;
 
         final span = _spanBuilder.build(
           row[colIndex],
-          cellStyle,
+          styleWithColor,
           theme,
           onLinkTapped: onLinkTapped,
         );

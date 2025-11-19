@@ -2,19 +2,26 @@ import 'package:flutter/rendering.dart';
 
 import '../text/inline_span_builder.dart';
 import 'base/render_markdown_block.dart';
+import 'mixins/selectable_text_mixin.dart';
 
 /// Renders a paragraph block.
-class RenderMarkdownParagraph extends RenderMarkdownBlock {
+class RenderMarkdownParagraph extends RenderMarkdownBlock with SelectableTextMixin {
   /// Creates a new render paragraph.
   RenderMarkdownParagraph({
     required super.block,
     required super.theme,
     super.onLinkTapped,
     super.onCheckboxTapped,
-  });
+    SelectionRegistrar? selectionRegistrar,
+  }) {
+    registrar = selectionRegistrar;
+  }
 
   TextPainter? _textPainter;
   final _spanBuilder = const InlineSpanBuilder();
+
+  @override
+  TextPainter? get selectableTextPainter => _textPainter;
 
   @override
   void invalidateCache() {
@@ -55,12 +62,24 @@ class RenderMarkdownParagraph extends RenderMarkdownBlock {
     
     final painter = _getTextPainter(constraints.maxWidth);
     size = Size(constraints.maxWidth, painter.height);
+    
+    // Initialize selectable after layout
+    initSelectableIfNeeded();
   }
 
   @override
   void paint(PaintingContext context, Offset offset) {
+    // Paint selection highlight first
+    paintSelection(context, offset);
+    
     final painter = _getTextPainter(constraints.maxWidth);
     painter.paint(context.canvas, offset);
+  }
+
+  @override
+  void dispose() {
+    disposeSelectable();
+    super.dispose();
   }
 
   @override

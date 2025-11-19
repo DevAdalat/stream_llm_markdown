@@ -7,6 +7,20 @@ void main() {
   runApp(const MyApp());
 }
 
+class DemoPage extends StatefulWidget {
+  final bool isDarkMode;
+
+  final VoidCallback onToggleTheme;
+  const DemoPage({
+    required this.isDarkMode,
+    required this.onToggleTheme,
+    super.key,
+  });
+
+  @override
+  State<DemoPage> createState() => _DemoPageState();
+}
+
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -14,65 +28,87 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
-  ThemeMode _themeMode = ThemeMode.light;
-
-  void _toggleTheme() {
-    setState(() {
-      _themeMode = _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Stream Markdown Renderer Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData.dark(useMaterial3: true),
-      themeMode: _themeMode,
-      home: DemoPage(
-        isDarkMode: _themeMode == ThemeMode.dark,
-        onToggleTheme: _toggleTheme,
-      ),
-    );
-  }
-}
-
-class DemoPage extends StatefulWidget {
-  const DemoPage({
-    required this.isDarkMode,
-    required this.onToggleTheme,
-    super.key,
-  });
-
-  final bool isDarkMode;
-  final VoidCallback onToggleTheme;
-
-  @override
-  State<DemoPage> createState() => _DemoPageState();
-}
-
 class _DemoPageState extends State<DemoPage> {
   StreamController<String>? _controller;
   bool _isStreaming = false;
 
   @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Stream Markdown Demo'),
+        actions: [
+          IconButton(
+            icon: Icon(widget.isDarkMode ? Icons.light_mode : Icons.dark_mode),
+            onPressed: widget.onToggleTheme,
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _isStreaming ? null : _startStream,
+                  icon: const Icon(Icons.play_arrow),
+                  label: Text(_isStreaming ? 'Streaming...' : 'Start Stream'),
+                ),
+                const SizedBox(width: 16),
+                if (_isStreaming)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SelectionArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: _controller != null
+                    ? StreamMarkdownRenderer(
+                        markdownStream: _controller!.stream,
+                        showCursor: false,
+                        theme: widget.isDarkMode
+                            ? MarkdownTheme.dark()
+                            : MarkdownTheme.light(),
+                        onLinkTapped: (url) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Link tapped: $url')),
+                          );
+                        },
+                        onCheckboxTapped: (index, checked) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Checkbox $index ${checked ? 'checked' : 'unchecked'}',
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Text(
+                          'Press "Start Stream" to begin',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   void dispose() {
     _controller?.close();
     super.dispose();
-  }
-
-  void _startStream() {
-    _controller?.close();
-    _controller = StreamController<String>();
-    setState(() {
-      _isStreaming = true;
-    });
-
-    _simulateAiStream(_controller!);
   }
 
   Future<void> _simulateAiStream(StreamController<String> controller) async {
@@ -209,7 +245,7 @@ Perfect for AI chat applications! 🚀
 ''';
 
     var buffer = '';
-    
+
     // Simulate streaming with realistic chunk sizes and delays
     // Use runes to properly handle multi-byte characters (like emojis)
     final runes = markdown.runes.toList();
@@ -217,7 +253,7 @@ Perfect for AI chat applications! 🚀
       if (!controller.isClosed) {
         buffer += String.fromCharCode(runes[i]);
         controller.add(buffer);
-        
+
         // Variable delay to simulate realistic streaming
         final char = String.fromCharCode(runes[i]);
         final delay = switch (char) {
@@ -225,7 +261,7 @@ Perfect for AI chat applications! 🚀
           ' ' => 8,
           _ => 5,
         };
-        
+
         await Future<void>.delayed(Duration(milliseconds: delay));
       }
     }
@@ -237,73 +273,42 @@ Perfect for AI chat applications! 🚀
     }
   }
 
+  void _startStream() {
+    _controller?.close();
+    _controller = StreamController<String>();
+    setState(() {
+      _isStreaming = true;
+    });
+
+    _simulateAiStream(_controller!);
+  }
+}
+
+class _MyAppState extends State<MyApp> {
+  ThemeMode _themeMode = ThemeMode.light;
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Stream Markdown Demo'),
-        actions: [
-          IconButton(
-            icon: Icon(widget.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-            onPressed: widget.onToggleTheme,
-          ),
-        ],
+    return MaterialApp(
+      title: 'Stream Markdown Renderer Demo',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _isStreaming ? null : _startStream,
-                  icon: const Icon(Icons.play_arrow),
-                  label: Text(_isStreaming ? 'Streaming...' : 'Start Stream'),
-                ),
-                const SizedBox(width: 16),
-                if (_isStreaming)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: _controller != null
-                  ? StreamMarkdownRenderer(
-                      markdownStream: _controller!.stream,
-                      theme: widget.isDarkMode 
-                          ? MarkdownTheme.dark() 
-                          : MarkdownTheme.light(),
-                      onLinkTapped: (url) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Link tapped: $url')),
-                        );
-                      },
-                      onCheckboxTapped: (index, checked) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Checkbox $index ${checked ? 'checked' : 'unchecked'}',
-                            ),
-                          ),
-                        );
-                      },
-                    )
-                  : Center(
-                      child: Text(
-                        'Press "Start Stream" to begin',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ),
-            ),
-          ),
-        ],
+      darkTheme: ThemeData.dark(useMaterial3: true),
+      themeMode: _themeMode,
+      home: DemoPage(
+        isDarkMode: _themeMode == ThemeMode.dark,
+        onToggleTheme: _toggleTheme,
       ),
     );
+  }
+
+  void _toggleTheme() {
+    setState(() {
+      _themeMode = _themeMode == ThemeMode.light
+          ? ThemeMode.dark
+          : ThemeMode.light;
+    });
   }
 }

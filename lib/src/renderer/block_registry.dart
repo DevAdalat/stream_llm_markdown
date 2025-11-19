@@ -1,5 +1,8 @@
+import 'package:flutter/rendering.dart';
+
 import '../parsing/markdown_block.dart';
 import '../render_objects/base/render_markdown_block.dart';
+import '../render_objects/mixins/selectable_text_mixin.dart';
 import '../render_objects/render_blockquote.dart';
 import '../render_objects/render_code_block.dart';
 import '../render_objects/render_header.dart';
@@ -18,6 +21,7 @@ class BlockRegistry {
     required MarkdownTheme theme,
     void Function(String url)? onLinkTapped,
     void Function(int index, bool checked)? onCheckboxTapped,
+    SelectionRegistrar? selectionRegistrar,
   }) {
     switch (block.type) {
       case MarkdownBlockType.paragraph:
@@ -26,6 +30,7 @@ class BlockRegistry {
           theme: theme,
           onLinkTapped: onLinkTapped,
           onCheckboxTapped: onCheckboxTapped,
+          selectionRegistrar: selectionRegistrar,
         );
       case MarkdownBlockType.header:
         return RenderMarkdownHeader(
@@ -33,6 +38,7 @@ class BlockRegistry {
           theme: theme,
           onLinkTapped: onLinkTapped,
           onCheckboxTapped: onCheckboxTapped,
+          selectionRegistrar: selectionRegistrar,
         );
       case MarkdownBlockType.codeBlock:
         return RenderMarkdownCodeBlock(
@@ -40,6 +46,7 @@ class BlockRegistry {
           theme: theme,
           onLinkTapped: onLinkTapped,
           onCheckboxTapped: onCheckboxTapped,
+          selectionRegistrar: selectionRegistrar,
         );
       case MarkdownBlockType.blockquote:
         return RenderMarkdownBlockquote(
@@ -84,6 +91,7 @@ class BlockRegistry {
           theme: theme,
           onLinkTapped: onLinkTapped,
           onCheckboxTapped: onCheckboxTapped,
+          selectionRegistrar: selectionRegistrar,
         );
     }
   }
@@ -95,11 +103,17 @@ class BlockRegistry {
     required MarkdownTheme theme,
     void Function(String url)? onLinkTapped,
     void Function(int index, bool checked)? onCheckboxTapped,
+    SelectionRegistrar? selectionRegistrar,
   }) {
     renderObject
       ..block = block
       ..theme = theme
       ..onLinkTapped = onLinkTapped
       ..onCheckboxTapped = onCheckboxTapped;
+
+    // Update selection registrar for selectable render objects
+    if (renderObject is SelectableTextMixin) {
+      (renderObject as SelectableTextMixin).registrar = selectionRegistrar;
+    }
   }
 }

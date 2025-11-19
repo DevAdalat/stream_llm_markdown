@@ -4,16 +4,20 @@ import 'package:flutter/services.dart';
 import '../text/syntax_highlighter.dart';
 import '../theme/markdown_theme.dart';
 import 'base/render_markdown_block.dart';
+import 'mixins/selectable_text_mixin.dart';
 
 /// Renders a code block with syntax highlighting.
-class RenderMarkdownCodeBlock extends RenderMarkdownBlock {
+class RenderMarkdownCodeBlock extends RenderMarkdownBlock with SelectableTextMixin {
   /// Creates a new render code block.
   RenderMarkdownCodeBlock({
     required super.block,
     required super.theme,
     super.onLinkTapped,
     super.onCheckboxTapped,
-  });
+    SelectionRegistrar? selectionRegistrar,
+  }) {
+    registrar = selectionRegistrar;
+  }
 
   TextPainter? _codePainter;
   TextPainter? _labelPainter;
@@ -21,6 +25,13 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock {
   
   bool _isHoveringCopy = false;
   Rect? _copyButtonRect;
+  Offset _textOffset = Offset.zero;
+
+  @override
+  TextPainter? get selectableTextPainter => _codePainter;
+
+  @override
+  Offset get textPaintOffset => _textOffset;
 
   String get _language => (block.metadata['language'] as String?) ?? '';
 
@@ -115,6 +126,18 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock {
       buttonSize,
       buttonSize,
     );
+
+    // Calculate text offset for selection
+    final padding = _codeTheme.padding ?? const EdgeInsets.all(16);
+    var offsetY = padding.top;
+    if (_language.isNotEmpty) {
+      final labelPainter = _getLabelPainter();
+      offsetY += labelPainter.height + 8;
+    }
+    _textOffset = Offset(padding.left, offsetY);
+    
+    // Initialize selectable after layout
+    initSelectableIfNeeded();
   }
 
   @override
@@ -132,6 +155,9 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock {
       Paint()..color = backgroundColor,
     );
 
+    // Paint selection highlight
+    paintSelection(context, offset);
+
     var contentOffset = offset + Offset(padding.left, padding.top);
 
     // Draw language label
@@ -147,6 +173,12 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock {
 
     // Draw copy button
     _drawCopyButton(canvas, offset);
+  }
+
+  @override
+  void dispose() {
+    disposeSelectable();
+    super.dispose();
   }
 
   void _drawCopyButton(Canvas canvas, Offset offset) {
