@@ -64,7 +64,7 @@ StreamMarkdownRenderer(
       ),
     ),
   ),
-)
+);
 ```
 
 ### Simulating AI Streaming
@@ -75,14 +75,8 @@ Stream<String> simulateAiStream() async* {
 # Hello World
 
 This is a **streaming** markdown renderer.
-
-```dart
-void main() {
-  print('Hello, World!');
-}
-```
 ''';
-
+void main() {
   for (var i = 0; i < response.length; i++) {
     yield response.substring(0, i + 1);
     await Future.delayed(const Duration(milliseconds: 20));
@@ -144,7 +138,7 @@ StreamMarkdownRenderer({
   void Function(String url)? onLinkTapped,
   void Function(int index, bool checked)? onCheckboxTapped,
   Key? key,
-})
+});
 ```
 
 ### MarkdownTheme
@@ -160,7 +154,7 @@ MarkdownTheme({
   BlockquoteTheme? blockquoteTheme,
   TableTheme? tableTheme,
   double? blockSpacing,
-})
+});
 ```
 
 ## License
