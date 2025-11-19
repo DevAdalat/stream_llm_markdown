@@ -21,6 +21,11 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
     this.theme,
     this.onLinkTapped,
     this.onCheckboxTapped,
+    this.showCursor = true,
+    this.cursorColor,
+    this.cursorWidth = 2.0,
+    this.cursorHeight,
+    this.cursorBlinkDuration = const Duration(milliseconds: 500),
     super.key,
   });
 
@@ -39,6 +44,21 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
   /// Callback when a checkbox is tapped.
   final void Function(int index, bool checked)? onCheckboxTapped;
 
+  /// Whether to show a blinking cursor while streaming.
+  final bool showCursor;
+
+  /// Color of the cursor. Defaults to theme text color.
+  final Color? cursorColor;
+
+  /// Width of the cursor.
+  final double cursorWidth;
+
+  /// Height of the cursor. Defaults to text height.
+  final double? cursorHeight;
+
+  /// Duration for cursor blink animation.
+  final Duration cursorBlinkDuration;
+
   @override
   RenderObject createRenderObject(BuildContext context) {
     return RenderStreamMarkdown(
@@ -46,6 +66,11 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
       theme: (theme ?? MarkdownTheme.light()).withDefaults(),
       onLinkTapped: onLinkTapped,
       onCheckboxTapped: onCheckboxTapped,
+      showCursor: showCursor,
+      cursorColor: cursorColor,
+      cursorWidth: cursorWidth,
+      cursorHeight: cursorHeight,
+      cursorBlinkDuration: cursorBlinkDuration,
     );
   }
 
@@ -58,7 +83,12 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
       ..markdownStream = markdownStream
       ..theme = (theme ?? MarkdownTheme.light()).withDefaults()
       ..onLinkTapped = onLinkTapped
-      ..onCheckboxTapped = onCheckboxTapped;
+      ..onCheckboxTapped = onCheckboxTapped
+      ..showCursor = showCursor
+      ..cursorColor = cursorColor
+      ..cursorWidth = cursorWidth
+      ..cursorHeight = cursorHeight
+      ..cursorBlinkDuration = cursorBlinkDuration;
   }
 }
 
@@ -70,9 +100,19 @@ class RenderStreamMarkdown extends RenderBox {
     required MarkdownTheme theme,
     void Function(String url)? onLinkTapped,
     void Function(int index, bool checked)? onCheckboxTapped,
+    bool showCursor = true,
+    Color? cursorColor,
+    double cursorWidth = 2.0,
+    double? cursorHeight,
+    Duration cursorBlinkDuration = const Duration(milliseconds: 500),
   })  : _theme = theme,
         _onLinkTapped = onLinkTapped,
-        _onCheckboxTapped = onCheckboxTapped {
+        _onCheckboxTapped = onCheckboxTapped,
+        _showCursor = showCursor,
+        _cursorColor = cursorColor,
+        _cursorWidth = cursorWidth,
+        _cursorHeight = cursorHeight,
+        _cursorBlinkDuration = cursorBlinkDuration {
     _subscribeToStream(markdownStream);
   }
 
@@ -82,10 +122,65 @@ class RenderStreamMarkdown extends RenderBox {
   String _pendingMarkdown = '';
   List<MarkdownBlock> _currentBlocks = [];
   bool _updateScheduled = false;
+  bool _isStreaming = true;
+  bool _cursorVisible = true;
+  Timer? _cursorTimer;
 
   // Child render objects
   final List<RenderMarkdownBlock> _children = [];
   final Map<String, RenderMarkdownBlock> _childMap = {};
+
+  // Cursor properties
+  bool get showCursor => _showCursor;
+  bool _showCursor;
+  set showCursor(bool value) {
+    if (_showCursor == value) return;
+    _showCursor = value;
+    _updateCursorTimer();
+    markNeedsPaint();
+  }
+
+  Color? get cursorColor => _cursorColor;
+  Color? _cursorColor;
+  set cursorColor(Color? value) {
+    if (_cursorColor == value) return;
+    _cursorColor = value;
+    markNeedsPaint();
+  }
+
+  double get cursorWidth => _cursorWidth;
+  double _cursorWidth;
+  set cursorWidth(double value) {
+    if (_cursorWidth == value) return;
+    _cursorWidth = value;
+    markNeedsPaint();
+  }
+
+  double? get cursorHeight => _cursorHeight;
+  double? _cursorHeight;
+  set cursorHeight(double? value) {
+    if (_cursorHeight == value) return;
+    _cursorHeight = value;
+    markNeedsPaint();
+  }
+
+  Duration get cursorBlinkDuration => _cursorBlinkDuration;
+  Duration _cursorBlinkDuration;
+  set cursorBlinkDuration(Duration value) {
+    if (_cursorBlinkDuration == value) return;
+    _cursorBlinkDuration = value;
+    _updateCursorTimer();
+  }
+
+  void _updateCursorTimer() {
+    _cursorTimer?.cancel();
+    if (_showCursor && _isStreaming) {
+      _cursorTimer = Timer.periodic(_cursorBlinkDuration, (_) {
+        _cursorVisible = !_cursorVisible;
+        markNeedsPaint();
+      });
+    }
+  }
 
   /// The stream of Markdown content.
   Stream<String>? _markdownStream;
@@ -132,11 +227,14 @@ class RenderStreamMarkdown extends RenderBox {
 
   void _subscribeToStream(Stream<String> stream) {
     _subscription?.cancel();
+    _cursorTimer?.cancel();
     _markdownStream = stream;
     _currentMarkdown = '';
     _pendingMarkdown = '';
     _currentBlocks = [];
     _updateScheduled = false;
+    _isStreaming = true;
+    _cursorVisible = true;
 
     // Clear existing children
     _clearChildren();
@@ -146,6 +244,9 @@ class RenderStreamMarkdown extends RenderBox {
       onError: _onError,
       onDone: _onDone,
     );
+
+    // Start cursor blinking
+    _updateCursorTimer();
   }
 
   void _clearChildren() {
@@ -232,17 +333,24 @@ class RenderStreamMarkdown extends RenderBox {
   }
 
   void _onDone() {
-    // Stream completed - ensure last block is not marked as partial
+    // Stream completed - stop cursor and ensure last block is not marked as partial
+    _isStreaming = false;
+    _cursorTimer?.cancel();
+    _cursorTimer = null;
+    
     if (_currentBlocks.isNotEmpty && _currentBlocks.last.isPartial) {
       final lastBlock = _currentBlocks.removeLast();
       _currentBlocks.add(lastBlock.copyWith(isPartial: false));
       _updateChildren();
     }
+    
+    markNeedsPaint();
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
+    _cursorTimer?.cancel();
     _clearChildren();
     super.dispose();
   }
@@ -283,6 +391,7 @@ class RenderStreamMarkdown extends RenderBox {
     final blockSpacing = _theme.blockSpacing ?? 16;
 
     var currentY = offset.dy;
+    var lastChildBottom = offset.dy;
 
     for (var i = 0; i < _children.length; i++) {
       final child = _children[i];
@@ -294,10 +403,30 @@ class RenderStreamMarkdown extends RenderBox {
       context.paintChild(child, Offset(offset.dx, currentY));
 
       currentY += child.size.height;
+      lastChildBottom = currentY;
 
       if (i < _children.length - 1) {
         currentY += blockSpacing;
       }
+    }
+
+    // Draw blinking cursor if streaming
+    if (_showCursor && _isStreaming && _cursorVisible && _children.isNotEmpty) {
+      final canvas = context.canvas;
+      final color = _cursorColor ?? _theme.textStyle?.color ?? const Color(0xFF000000);
+      final height = _cursorHeight ?? (_theme.textStyle?.fontSize ?? 16) * 1.2;
+      
+      // Position cursor at the end of last block
+      final cursorX = offset.dx + 4; // Small offset from left
+      final cursorY = lastChildBottom - height - 4;
+      
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(cursorX, cursorY, _cursorWidth, height),
+          const Radius.circular(1),
+        ),
+        Paint()..color = color,
+      );
     }
   }
 
