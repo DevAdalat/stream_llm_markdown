@@ -305,12 +305,6 @@ class _SelectableFragment implements Selectable {
     }
   }
 
-  SelectionResult _getResultForOffset(Offset offset) {
-    if (offset.dy < 0) return SelectionResult.previous;
-    if (offset.dy > paragraph.size.height) return SelectionResult.next;
-    return SelectionResult.end;
-  }
-
   Offset _clampOffset(Offset offset) {
     return Offset(
       offset.dx.clamp(0, paragraph.size.width),

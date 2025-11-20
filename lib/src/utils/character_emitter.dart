@@ -29,16 +29,13 @@ class CharacterEmitter {
     Timer? emitTimer;
 
     // Buffer for characters waiting to be emitted
-    final List<String> characterBuffer = [];
+    final characterBuffer = <String>[];
     
     // The accumulated text that has been emitted so far
-    String emittedText = '';
-    
-    // The latest complete text from the source stream
-    String latestSourceText = '';
+    var emittedText = '';
     
     // Whether the source stream has completed
-    bool sourceComplete = false;
+    var sourceComplete = false;
 
     void emitNextCharacter() {
       if (characterBuffer.isNotEmpty) {
@@ -74,8 +71,6 @@ class CharacterEmitter {
         // Subscribe to the source stream
         subscription = source.listen(
           (chunk) {
-            latestSourceText = chunk;
-            
             // Calculate new characters (difference between latest and emitted)
             if (chunk.length > emittedText.length) {
               final newCharacters = chunk.substring(emittedText.length);
@@ -89,7 +84,7 @@ class CharacterEmitter {
               startEmitTimer();
             }
           },
-          onError: (error, stackTrace) {
+          onError: (Object error, StackTrace stackTrace) {
             if (!controller.isClosed) {
               controller.addError(error, stackTrace);
             }
