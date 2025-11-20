@@ -30,10 +30,10 @@ class CharacterEmitter {
 
     // Buffer for characters waiting to be emitted
     final characterBuffer = <String>[];
-    
+
     // The accumulated text that has been emitted so far
     var emittedText = '';
-    
+
     // Whether the source stream has completed
     var sourceComplete = false;
 
@@ -41,7 +41,7 @@ class CharacterEmitter {
       if (characterBuffer.isNotEmpty) {
         // Take one character from buffer and add to emitted text
         emittedText += characterBuffer.removeAt(0);
-        
+
         if (!controller.isClosed) {
           controller.add(emittedText);
         }
@@ -74,12 +74,12 @@ class CharacterEmitter {
             // Calculate new characters (difference between latest and emitted)
             if (chunk.length > emittedText.length) {
               final newCharacters = chunk.substring(emittedText.length);
-              
+
               // Add new characters to buffer
               for (int i = 0; i < newCharacters.length; i++) {
                 characterBuffer.add(newCharacters[i]);
               }
-              
+
               // Start the emit timer if not already running
               startEmitTimer();
             }

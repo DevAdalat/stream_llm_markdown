@@ -84,6 +84,17 @@ class RenderMarkdownParagraph extends RenderMarkdownBlock
   }
 
   @override
+  Offset? getCursorOffset() {
+    if (_textPainter == null) return null;
+    
+    // Get the position at the end of the text
+    final endPosition = TextPosition(offset: _textPainter!.plainText.length);
+    final endOffset = _textPainter!.getOffsetForCaret(endPosition, Rect.zero);
+    
+    return endOffset;
+  }
+
+  @override
   String? getLinkAtPosition(Offset position) {
     if (_textPainter == null) return null;
 

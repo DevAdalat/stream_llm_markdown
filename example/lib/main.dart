@@ -76,8 +76,10 @@ class _DemoPageState extends State<DemoPage> {
                 child: _controller != null
                     ? StreamMarkdownRenderer(
                         markdownStream: _controller!.stream,
-                        showCursor: true,
-                        characterDelay: const Duration(milliseconds: 30),
+                        showCursor: false,
+                        // characterDelay: const Duration(
+                        //   milliseconds: 15,
+                        // ), // Character-by-character animation
                         scrollController: _scrollController,
                         autoScrollToBottom: true,
                         theme: widget.isDarkMode
@@ -107,6 +109,7 @@ class _DemoPageState extends State<DemoPage> {
               ),
             ),
           ),
+          SizedBox(height: 20),
         ],
       ),
     );

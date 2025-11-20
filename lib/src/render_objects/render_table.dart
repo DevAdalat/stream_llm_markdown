@@ -260,4 +260,44 @@ class RenderMarkdownTable extends RenderMarkdownBlock {
       currentY += rowHeight;
     }
   }
+
+  @override
+  Offset? getCursorOffset() {
+    if (_cellPainters.isEmpty) return null;
+    
+    // Get the last row and last cell
+    final lastRow = _cellPainters.last;
+    if (lastRow.isEmpty) return null;
+    
+    final lastCellPainter = lastRow.last;
+    
+    // Calculate position at end of last cell
+    final endPosition = TextPosition(offset: lastCellPainter.plainText.length);
+    final endOffset = lastCellPainter.getOffsetForCaret(endPosition, Rect.zero);
+    
+    // Calculate X position - sum of column widths up to last column
+    var xOffset = 0.0;
+    for (var i = 0; i < _columnWidths.length; i++) {
+      if (i < _columnWidths.length - 1) {
+        xOffset += _columnWidths[i];
+      } else {
+        // For last column, add partial width based on text position
+        final cellPadding = _tableTheme.cellPadding ?? 
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
+        xOffset += cellPadding.left + endOffset.dx;
+      }
+    }
+    
+    // Calculate Y position - sum of row heights
+    var yOffset = 0.0;
+    final borderWidth = _tableTheme.borderWidth ?? 1;
+    for (var i = 0; i < _rowHeights.length - 1; i++) {
+      yOffset += _rowHeights[i] + borderWidth;
+    }
+    
+    // Add position within last cell
+    yOffset += (_rowHeights.last - lastCellPainter.height) / 2 + endOffset.dy;
+    
+    return Offset(xOffset, yOffset);
+  }
 }

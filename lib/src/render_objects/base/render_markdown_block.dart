@@ -135,4 +135,9 @@ abstract class RenderMarkdownBlock extends RenderBox {
   /// Gets the checkbox at the given position, if any.
   /// Returns the checkbox index or -1 if none.
   int getCheckboxAtPosition(Offset position) => -1;
+
+  /// Gets the offset where the cursor should be positioned (end of text).
+  /// Returns an Offset relative to this block's top-left corner.
+  /// Override this in subclasses that have text content.
+  Offset? getCursorOffset() => null;
 }

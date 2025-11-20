@@ -282,4 +282,16 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock
   void _copyToClipboard() {
     Clipboard.setData(ClipboardData(text: block.content));
   }
+
+  @override
+  Offset? getCursorOffset() {
+    if (_codePainter == null) return null;
+    
+    // Get the position at the end of the code text
+    final endPosition = TextPosition(offset: _codePainter!.plainText.length);
+    final endOffset = _codePainter!.getOffsetForCaret(endPosition, Rect.zero);
+    
+    // Add the text offset (padding + label)
+    return endOffset + _textOffset;
+  }
 }

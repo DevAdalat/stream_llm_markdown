@@ -376,6 +376,32 @@ class RenderMarkdownList extends RenderMarkdownBlock {
       }
     }
   }
+
+  @override
+  Offset? getCursorOffset() {
+    if (_itemPainters.isEmpty) return null;
+    
+    // Get the last item painter
+    final lastPainter = _itemPainters.last;
+    
+    // Get the position at the end of the last item's text
+    final endPosition = TextPosition(offset: lastPainter.plainText.length);
+    final endOffset = lastPainter.getOffsetForCaret(endPosition, Rect.zero);
+    
+    // Calculate Y position - sum of all previous items
+    var yOffset = 0.0;
+    final itemSpacing = _listTheme.itemSpacing ?? 8;
+    for (var i = 0; i < _itemPainters.length - 1; i++) {
+      yOffset += _itemPainters[i].height + itemSpacing;
+    }
+    
+    // Add left indent and bullet/number width
+    final leftIndent = _listTheme.indentWidth ?? 16.0;
+    final bulletWidth = _listTheme.bulletSize ?? 6.0;
+    final xOffset = leftIndent + bulletWidth + 8 + endOffset.dx;
+    
+    return Offset(xOffset, yOffset + endOffset.dy);
+  }
 }
 
 /// Information about a nested list for rendering.

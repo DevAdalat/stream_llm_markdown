@@ -561,17 +561,38 @@ class RenderStreamMarkdown extends RenderBox {
           _cursorColor ?? _theme.textStyle?.color ?? const Color(0xFF000000);
       final height = _cursorHeight ?? (_theme.textStyle?.fontSize ?? 16) * 1.2;
 
-      // Position cursor at the end of last block
-      final cursorX = offset.dx + 4; // Small offset from left
-      final cursorY = lastChildBottom - height - 4;
+      // Get the last child and calculate cursor position
+      final lastChild = _children.last;
+      final lastChildY = lastChildBottom - lastChild.size.height;
+      
+      // Get the cursor offset from the last child
+      final cursorOffset = lastChild.getCursorOffset();
+      
+      if (cursorOffset != null) {
+        // Position cursor at the end of last block's text
+        final cursorX = offset.dx + cursorOffset.dx;
+        final cursorY = lastChildY + cursorOffset.dy - height / 2;
 
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(cursorX, cursorY, _cursorWidth, height),
-          const Radius.circular(1),
-        ),
-        Paint()..color = color,
-      );
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(cursorX, cursorY, _cursorWidth, height),
+            const Radius.circular(1),
+          ),
+          Paint()..color = color,
+        );
+      } else {
+        // Fallback: position at start of block if no cursor offset available
+        final cursorX = offset.dx + 4;
+        final cursorY = lastChildY + (lastChild.size.height - height) / 2;
+
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(cursorX, cursorY, _cursorWidth, height),
+            const Radius.circular(1),
+          ),
+          Paint()..color = color,
+        );
+      }
     }
   }
 

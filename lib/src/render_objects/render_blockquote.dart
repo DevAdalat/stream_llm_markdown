@@ -238,4 +238,31 @@ class RenderMarkdownBlockquote extends RenderMarkdownBlock {
       }
     }
   }
+
+  @override
+  Offset? getCursorOffset() {
+    if (_painters.isEmpty) return null;
+    
+    // Get the last painter
+    final lastPainter = _painters.last;
+    
+    // Get the position at the end of the last block's text
+    final endPosition = TextPosition(offset: lastPainter.plainText.length);
+    final endOffset = lastPainter.getOffsetForCaret(endPosition, Rect.zero);
+    
+    // Calculate Y position - sum of all previous painters
+    final padding = _blockquoteTheme.padding ?? const EdgeInsets.fromLTRB(16, 12, 12, 12);
+    final blockSpacing = theme.blockSpacing ?? 16.0;
+    final borderWidth = _blockquoteTheme.borderWidth ?? 4;
+    
+    var yOffset = padding.top;
+    for (var i = 0; i < _painters.length - 1; i++) {
+      yOffset += _painters[i].height + blockSpacing;
+    }
+    
+    // Add X offset (border + padding)
+    final xOffset = borderWidth + padding.left + endOffset.dx;
+    
+    return Offset(xOffset, yOffset + endOffset.dy);
+  }
 }
