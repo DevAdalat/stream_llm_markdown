@@ -10,6 +10,7 @@ import '../parsing/markdown_block.dart';
 import '../render_objects/base/render_markdown_block.dart';
 import '../render_objects/mixins/selectable_text_mixin.dart';
 import '../theme/markdown_theme.dart';
+import '../utils/character_emitter.dart';
 import 'block_registry.dart';
 
 /// A widget that renders streaming Markdown content using custom RenderObjects.
@@ -32,6 +33,7 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
     this.autoScrollToBottom = true,
     this.selectionEnabled =
         false, // Disabled for now - selection implementation in progress
+    this.characterDelay,
     super.key,
   });
 
@@ -87,10 +89,28 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
   /// Defaults to true. Requires [scrollController] to be provided.
   final bool autoScrollToBottom;
 
+  /// Delay between character emissions for typewriter effect.
+  ///
+  /// When set, incoming text chunks are buffered and emitted character-by-character
+  /// with this delay, creating a typewriter effect.
+  ///
+  /// If null or [Duration.zero], text is displayed immediately as it arrives from the stream.
+  ///
+  /// Example: `Duration(milliseconds: 50)` for smooth typing effect.
+  final Duration? characterDelay;
+
   @override
   RenderObject createRenderObject(BuildContext context) {
+    // Apply character-by-character emission if delay is specified
+    final effectiveStream = characterDelay != null && characterDelay != Duration.zero
+        ? CharacterEmitter.emit(
+            source: markdownStream,
+            characterDelay: characterDelay!,
+          )
+        : markdownStream;
+
     return RenderStreamMarkdown(
-      markdownStream: markdownStream,
+      markdownStream: effectiveStream,
       theme: (theme ?? MarkdownTheme.light()).withDefaults(),
       onLinkTapped: onLinkTapped,
       onCheckboxTapped: onCheckboxTapped,
@@ -112,8 +132,16 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
     BuildContext context,
     RenderStreamMarkdown renderObject,
   ) {
+    // Apply character-by-character emission if delay is specified
+    final effectiveStream = characterDelay != null && characterDelay != Duration.zero
+        ? CharacterEmitter.emit(
+            source: markdownStream,
+            characterDelay: characterDelay!,
+          )
+        : markdownStream;
+
     renderObject
-      ..markdownStream = markdownStream
+      ..markdownStream = effectiveStream
       ..theme = (theme ?? MarkdownTheme.light()).withDefaults()
       ..onLinkTapped = onLinkTapped
       ..onCheckboxTapped = onCheckboxTapped

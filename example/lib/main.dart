@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:stream_markdown_renderer/stream_markdown_renderer.dart';
@@ -30,10 +31,12 @@ class MyApp extends StatefulWidget {
 
 class _DemoPageState extends State<DemoPage> {
   StreamController<String>? _controller;
+  final ScrollController _scrollController = ScrollController();
   bool _isStreaming = false;
 
   @override
   Widget build(BuildContext context) {
+    log('Building DemoPage');
     return Scaffold(
       appBar: AppBar(
         title: const Text('Stream Markdown Demo'),
@@ -68,11 +71,15 @@ class _DemoPageState extends State<DemoPage> {
           Expanded(
             child: SelectionArea(
               child: SingleChildScrollView(
+                controller: _scrollController,
                 padding: const EdgeInsets.all(16),
                 child: _controller != null
                     ? StreamMarkdownRenderer(
                         markdownStream: _controller!.stream,
-                        showCursor: false,
+                        showCursor: true,
+                        characterDelay: const Duration(milliseconds: 30),
+                        scrollController: _scrollController,
+                        autoScrollToBottom: true,
                         theme: widget.isDarkMode
                             ? MarkdownTheme.dark()
                             : MarkdownTheme.light(),
@@ -108,6 +115,7 @@ class _DemoPageState extends State<DemoPage> {
   @override
   void dispose() {
     _controller?.close();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -247,23 +255,26 @@ Perfect for AI chat applications! 🚀
     var buffer = '';
 
     // Simulate streaming with realistic chunk sizes and delays
-    // Use runes to properly handle multi-byte characters (like emojis)
-    final runes = markdown.runes.toList();
-    for (var i = 0; i < runes.length; i++) {
-      if (!controller.isClosed) {
-        buffer += String.fromCharCode(runes[i]);
-        controller.add(buffer);
+    // Split into words and whitespace to simulate token-based streaming
+    final RegExp tokenRegex = RegExp(r'[^\s]+|\s+');
+    final matches = tokenRegex.allMatches(markdown);
 
-        // Variable delay to simulate realistic streaming
-        final char = String.fromCharCode(runes[i]);
-        final delay = switch (char) {
-          '\n' => 15,
-          ' ' => 8,
-          _ => 5,
-        };
+    for (final match in matches) {
+      if (controller.isClosed) break;
 
-        await Future<void>.delayed(Duration(milliseconds: delay));
-      }
+      final token = match.group(0)!;
+      buffer += token;
+      controller.add(buffer);
+
+      // Variable delay to simulate realistic streaming
+      final isNewline = token.contains('\n');
+      final isSpace = token.trim().isEmpty;
+
+      final delay = isNewline ? 50 : (isSpace ? 10 : 30);
+      await Future<void>.delayed(Duration(milliseconds: delay));
+
+      // Scroll to bottom after rendering
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     }
 
     if (!controller.isClosed) {
@@ -282,6 +293,16 @@ Perfect for AI chat applications! 🚀
 
     _simulateAiStream(_controller!);
   }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+      );
+    }
+  }
 }
 
 class _MyAppState extends State<MyApp> {
@@ -289,6 +310,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    log('Building MaterialApp');
     return MaterialApp(
       title: 'Stream Markdown Renderer Demo',
       theme: ThemeData(

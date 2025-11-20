@@ -1,9 +1,9 @@
 name: stream_markdown_renderer
 description: A high-performance streaming Markdown renderer for AI chat applications using custom RenderObjects for maximum efficiency.
 version: 1.0.0
-homepage: https://github.com/example/stream_markdown_renderer
-repository: https://github.com/example/stream_markdown_renderer
-issue_tracker: https://github.com/example/stream_markdown_renderer/issues
+homepage: https://github.com/DevAdalat/stream_markdown_renderer
+repository: https://github.com/DevAdalat/stream_markdown_renderer
+issue_tracker: https://github.com/DevAdalat/stream_markdown_renderer/issues
 
 environment:
   sdk: ^3.5.0
