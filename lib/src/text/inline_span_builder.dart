@@ -90,11 +90,12 @@ class InlineSpanBuilder {
       }
 
       // Bold and italic (*** or ___)
-      if ((text[i] == '*' || text[i] == '_') && 
-          i + 2 < text.length && 
-          text[i + 1] == text[i] && 
+      if ((text[i] == '*' || text[i] == '_') &&
+          i + 2 < text.length &&
+          text[i + 1] == text[i] &&
           text[i + 2] == text[i]) {
-        final result = _parseBoldItalic(text, i, baseStyle, theme, onLinkTapped);
+        final result =
+            _parseBoldItalic(text, i, baseStyle, theme, onLinkTapped);
         if (result != null) {
           spans.add(result.span);
           i = result.endIndex;
@@ -103,8 +104,8 @@ class InlineSpanBuilder {
       }
 
       // Bold (** or __)
-      if ((text[i] == '*' || text[i] == '_') && 
-          i + 1 < text.length && 
+      if ((text[i] == '*' || text[i] == '_') &&
+          i + 1 < text.length &&
           text[i + 1] == text[i]) {
         final result = _parseBold(text, i, baseStyle, theme, onLinkTapped);
         if (result != null) {
@@ -126,7 +127,8 @@ class InlineSpanBuilder {
 
       // Strikethrough (~~)
       if (text[i] == '~' && i + 1 < text.length && text[i + 1] == '~') {
-        final result = _parseStrikethrough(text, i, baseStyle, theme, onLinkTapped);
+        final result =
+            _parseStrikethrough(text, i, baseStyle, theme, onLinkTapped);
         if (result != null) {
           spans.add(result.span);
           i = result.endIndex;
@@ -173,7 +175,12 @@ class InlineSpanBuilder {
     return spans;
   }
 
-  _ParseResult? _parseInlineCode(String text, int start, TextStyle baseStyle, MarkdownTheme theme) {
+  _ParseResult? _parseInlineCode(
+    String text,
+    int start,
+    TextStyle baseStyle,
+    MarkdownTheme theme,
+  ) {
     // Find the closing backtick(s)
     var backticks = 1;
     var i = start + 1;
@@ -183,7 +190,7 @@ class InlineSpanBuilder {
     }
 
     final openingEnd = i;
-    
+
     // Find matching closing backticks
     while (i < text.length) {
       if (text[i] == '`') {
@@ -199,16 +206,17 @@ class InlineSpanBuilder {
           if (code.startsWith(' ') && code.endsWith(' ') && code.length > 2) {
             code = code.substring(1, code.length - 1);
           }
-          
+
           // Use theme's inline code style if available
           final themeCodeStyle = theme.inlineCodeStyle;
           final codeStyle = themeCodeStyle != null
               ? baseStyle.merge(themeCodeStyle)
               : baseStyle.copyWith(
                   fontFamily: 'monospace',
-                  backgroundColor: theme.codeTheme?.backgroundColor?.withValues(alpha: 0.3),
+                  backgroundColor:
+                      theme.codeTheme?.backgroundColor?.withValues(alpha: 0.3),
                 );
-          
+
           return _ParseResult(
             TextSpan(text: code, style: codeStyle),
             i,
@@ -224,7 +232,7 @@ class InlineSpanBuilder {
 
   _ParseResult? _parseInlineLatex(String text, int start, TextStyle baseStyle) {
     if (start + 1 >= text.length) return null;
-    
+
     // Don't match $$ (block latex)
     if (text[start + 1] == r'$') return null;
 
@@ -253,7 +261,7 @@ class InlineSpanBuilder {
 
     var i = start + 2;
     final altStart = i;
-    
+
     // Find ]
     while (i < text.length && text[i] != ']') {
       i++;
@@ -326,7 +334,7 @@ class InlineSpanBuilder {
     if (i > text.length) return null;
 
     final url = text.substring(urlStart, i);
-    
+
     // Use theme's link style if available
     final themeLinkStyle = theme.linkStyle;
     final linkStyle = themeLinkStyle != null
@@ -371,14 +379,14 @@ class InlineSpanBuilder {
     if (i >= text.length) return null;
 
     final content = text.substring(contentStart, i);
-    
+
     // Check if it's a valid URL or email
     if (!content.contains('://') && !content.contains('@')) {
       return null;
     }
 
-    final url = content.contains('@') && !content.contains('://') 
-        ? 'mailto:$content' 
+    final url = content.contains('@') && !content.contains('://')
+        ? 'mailto:$content'
         : content;
 
     // Use theme's link style if available
@@ -414,7 +422,7 @@ class InlineSpanBuilder {
   ) {
     final marker = text[start];
     var i = start + 3;
-    
+
     // Find closing ***
     while (i + 2 < text.length) {
       if (text[i] == marker && text[i + 1] == marker && text[i + 2] == marker) {
@@ -424,16 +432,19 @@ class InlineSpanBuilder {
         if (theme.boldStyle != null) {
           boldItalicStyle = boldItalicStyle.merge(theme.boldStyle);
         } else {
-          boldItalicStyle = boldItalicStyle.copyWith(fontWeight: FontWeight.bold);
+          boldItalicStyle =
+              boldItalicStyle.copyWith(fontWeight: FontWeight.bold);
         }
         if (theme.italicStyle != null) {
           boldItalicStyle = boldItalicStyle.merge(theme.italicStyle);
         } else {
-          boldItalicStyle = boldItalicStyle.copyWith(fontStyle: FontStyle.italic);
+          boldItalicStyle =
+              boldItalicStyle.copyWith(fontStyle: FontStyle.italic);
         }
-        
-        final nestedSpans = _parseInline(content, boldItalicStyle, theme, onLinkTapped);
-        
+
+        final nestedSpans =
+            _parseInline(content, boldItalicStyle, theme, onLinkTapped);
+
         return _ParseResult(
           TextSpan(children: nestedSpans),
           i + 3,
@@ -454,7 +465,7 @@ class InlineSpanBuilder {
   ) {
     final marker = text[start];
     var i = start + 2;
-    
+
     // Find closing **
     while (i + 1 < text.length) {
       if (text[i] == marker && text[i + 1] == marker) {
@@ -463,15 +474,16 @@ class InlineSpanBuilder {
           i++;
           continue;
         }
-        
+
         final content = text.substring(start + 2, i);
         // Use theme's bold style if available
         final boldStyle = theme.boldStyle != null
-            ? baseStyle.merge(theme.boldStyle!)
+            ? baseStyle.merge(theme.boldStyle)
             : baseStyle.copyWith(fontWeight: FontWeight.bold);
-        
-        final nestedSpans = _parseInline(content, boldStyle, theme, onLinkTapped);
-        
+
+        final nestedSpans =
+            _parseInline(content, boldStyle, theme, onLinkTapped);
+
         return _ParseResult(
           TextSpan(children: nestedSpans),
           i + 2,
@@ -492,10 +504,10 @@ class InlineSpanBuilder {
   ) {
     final marker = text[start];
     var i = start + 1;
-    
+
     // Don't match if followed by space
     if (i < text.length && text[i] == ' ') return null;
-    
+
     // Find closing *
     while (i < text.length) {
       if (text[i] == marker) {
@@ -504,17 +516,18 @@ class InlineSpanBuilder {
           i++;
           continue;
         }
-        
+
         final content = text.substring(start + 1, i);
         if (content.isEmpty) return null;
-        
+
         // Use theme's italic style if available
         final italicStyle = theme.italicStyle != null
-            ? baseStyle.merge(theme.italicStyle!)
+            ? baseStyle.merge(theme.italicStyle)
             : baseStyle.copyWith(fontStyle: FontStyle.italic);
-        
-        final nestedSpans = _parseInline(content, italicStyle, theme, onLinkTapped);
-        
+
+        final nestedSpans =
+            _parseInline(content, italicStyle, theme, onLinkTapped);
+
         return _ParseResult(
           TextSpan(children: nestedSpans),
           i + 1,
@@ -534,18 +547,19 @@ class InlineSpanBuilder {
     void Function(String url)? onLinkTapped,
   ) {
     var i = start + 2;
-    
+
     // Find closing ~~
     while (i + 1 < text.length) {
       if (text[i] == '~' && text[i + 1] == '~') {
         final content = text.substring(start + 2, i);
         // Use theme's strikethrough style if available
         final strikeStyle = theme.strikethroughStyle != null
-            ? baseStyle.merge(theme.strikethroughStyle!)
+            ? baseStyle.merge(theme.strikethroughStyle)
             : baseStyle.copyWith(decoration: TextDecoration.lineThrough);
-        
-        final nestedSpans = _parseInline(content, strikeStyle, theme, onLinkTapped);
-        
+
+        final nestedSpans =
+            _parseInline(content, strikeStyle, theme, onLinkTapped);
+
         return _ParseResult(
           TextSpan(children: nestedSpans),
           i + 2,
@@ -559,7 +573,7 @@ class InlineSpanBuilder {
 
   _ParseResult? _parseHtmlTag(String text, int start, TextStyle baseStyle) {
     // Handle common HTML tags
-    if (text.substring(start).startsWith('<br>') || 
+    if (text.substring(start).startsWith('<br>') ||
         text.substring(start).startsWith('<br/>') ||
         text.substring(start).startsWith('<br />')) {
       final tagEnd = text.indexOf('>', start) + 1;

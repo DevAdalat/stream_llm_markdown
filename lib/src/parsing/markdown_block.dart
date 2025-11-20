@@ -37,7 +37,7 @@ class MarkdownBlock {
   final String content;
 
   /// Additional metadata for this block.
-  /// 
+  ///
   /// For headers: {'level': 1-6}
   /// For code blocks: {'language': 'dart', 'info': '...'}
   /// For lists: {'start': 1, 'items': [...]}

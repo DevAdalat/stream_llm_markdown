@@ -45,8 +45,8 @@ class RenderMarkdownBlockquote extends RenderMarkdownBlock {
   void _buildPainters(double maxWidth) {
     if (_painters.isNotEmpty) return;
 
-    final padding = _blockquoteTheme.padding ??
-        const EdgeInsets.fromLTRB(16, 12, 12, 12);
+    final padding =
+        _blockquoteTheme.padding ?? const EdgeInsets.fromLTRB(16, 12, 12, 12);
     final borderWidth = _blockquoteTheme.borderWidth ?? 4;
     final availableWidth = maxWidth - padding.horizontal - borderWidth;
 
@@ -81,7 +81,10 @@ class RenderMarkdownBlockquote extends RenderMarkdownBlock {
     }
   }
 
-  TextPainter _createPainterForBlock(MarkdownBlock childBlock, double availableWidth) {
+  TextPainter _createPainterForBlock(
+    MarkdownBlock childBlock,
+    double availableWidth,
+  ) {
     final baseStyle = _blockquoteTheme.textStyle ??
         TextStyle(
           fontSize: 16,
@@ -103,25 +106,28 @@ class RenderMarkdownBlockquote extends RenderMarkdownBlock {
       case MarkdownBlockType.orderedList:
         // Render list items with bullets/numbers
         final items = (childBlock.metadata['items'] as List<dynamic>?)
-            ?.cast<Map<String, dynamic>>() ?? [];
+                ?.cast<Map<String, dynamic>>() ??
+            [];
         final isOrdered = childBlock.type == MarkdownBlockType.orderedList;
         final start = (childBlock.metadata['start'] as int?) ?? 1;
-        
+
         final children = <InlineSpan>[];
         for (var i = 0; i < items.length; i++) {
           final item = items[i];
           final content = item['content'] as String? ?? '';
           final prefix = isOrdered ? '${start + i}. ' : '• ';
-          
+
           if (i > 0) {
             children.add(const TextSpan(text: '\n'));
           }
-          
-          children.add(TextSpan(
-            text: prefix,
-            style: baseStyle.copyWith(fontStyle: FontStyle.normal),
-          ));
-          
+
+          children.add(
+            TextSpan(
+              text: prefix,
+              style: baseStyle.copyWith(fontStyle: FontStyle.normal),
+            ),
+          );
+
           // Parse inline content
           final contentSpan = _spanBuilder.build(
             content,
@@ -131,12 +137,13 @@ class RenderMarkdownBlockquote extends RenderMarkdownBlock {
           );
           children.add(contentSpan);
         }
-        
+
         span = TextSpan(children: children);
 
       case MarkdownBlockType.header:
         final level = (childBlock.metadata['level'] as int?) ?? 1;
-        final headerStyle = theme.headerTheme?.getStyleForLevel(level) ?? baseStyle;
+        final headerStyle =
+            theme.headerTheme?.getStyleForLevel(level) ?? baseStyle;
         span = _spanBuilder.build(
           childBlock.content,
           headerStyle,
@@ -145,7 +152,7 @@ class RenderMarkdownBlockquote extends RenderMarkdownBlock {
         );
 
       case MarkdownBlockType.codeBlock:
-        final codeStyle = theme.codeTheme?.textStyle ?? 
+        final codeStyle = theme.codeTheme?.textStyle ??
             baseStyle.copyWith(fontFamily: 'monospace');
         span = TextSpan(text: childBlock.content, style: codeStyle);
 
@@ -167,11 +174,11 @@ class RenderMarkdownBlockquote extends RenderMarkdownBlock {
   @override
   double computeIntrinsicHeight(double width) {
     _buildPainters(width);
-    
-    final padding = _blockquoteTheme.padding ??
-        const EdgeInsets.fromLTRB(16, 12, 12, 12);
+
+    final padding =
+        _blockquoteTheme.padding ?? const EdgeInsets.fromLTRB(16, 12, 12, 12);
     final blockSpacing = theme.blockSpacing ?? 16.0;
-    
+
     var height = padding.top;
     for (var i = 0; i < _painters.length; i++) {
       height += _painters[i].height;
@@ -180,7 +187,7 @@ class RenderMarkdownBlockquote extends RenderMarkdownBlock {
       }
     }
     height += padding.bottom;
-    
+
     return height;
   }
 
@@ -194,11 +201,10 @@ class RenderMarkdownBlockquote extends RenderMarkdownBlock {
   @override
   void paint(PaintingContext context, Offset offset) {
     final canvas = context.canvas;
-    final padding = _blockquoteTheme.padding ??
-        const EdgeInsets.fromLTRB(16, 12, 12, 12);
+    final padding =
+        _blockquoteTheme.padding ?? const EdgeInsets.fromLTRB(16, 12, 12, 12);
     final borderWidth = _blockquoteTheme.borderWidth ?? 4;
-    final borderColor =
-        _blockquoteTheme.borderColor ?? const Color(0xFFD1D5DB);
+    final borderColor = _blockquoteTheme.borderColor ?? const Color(0xFFD1D5DB);
     final backgroundColor = _blockquoteTheme.backgroundColor;
     final blockSpacing = theme.blockSpacing ?? 16.0;
 
@@ -219,11 +225,12 @@ class RenderMarkdownBlockquote extends RenderMarkdownBlock {
 
     // Draw content
     _buildPainters(constraints.maxWidth);
-    
+
     var currentY = offset.dy + padding.top;
     for (var i = 0; i < _painters.length; i++) {
       final painter = _painters[i];
-      final textOffset = Offset(offset.dx + borderWidth + padding.left, currentY);
+      final textOffset =
+          Offset(offset.dx + borderWidth + padding.left, currentY);
       painter.paint(canvas, textOffset);
       currentY += painter.height;
       if (i < _painters.length - 1) {

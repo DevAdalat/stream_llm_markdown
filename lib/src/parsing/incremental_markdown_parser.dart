@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'markdown_block.dart';
 
 /// A streaming-aware incremental Markdown parser.
-/// 
+///
 /// Parses Markdown text and emits a list of complete blocks plus
 /// one optional partial block for streaming content.
 class IncrementalMarkdownParser {
@@ -166,11 +166,11 @@ class IncrementalMarkdownParser {
 
       var loopCount = 0;
       const maxLoops = 1000;
-      
+
       while (j < lines.length && loopCount < maxLoops) {
         loopCount++;
         final currentLine = lines[j];
-        
+
         if (currentLine.startsWith('>')) {
           // Remove the > and optional space
           var content = currentLine.substring(1);
@@ -187,7 +187,7 @@ class IncrementalMarkdownParser {
 
       // Join and clean up the content
       final quoteContent = quoteLines.join('\n').trim();
-      
+
       // Don't create empty blockquotes
       if (quoteContent.isEmpty) {
         return _ParseResult(null, j);
@@ -220,15 +220,15 @@ class IncrementalMarkdownParser {
       // Check if it's a single-line block latex
       if (line.trim().endsWith(r'$$') && line.trim().length > 4) {
         final content = line.trim().substring(2, line.trim().length - 2);
-      return _ParseResult(
-        MarkdownBlock(
-          id: _generateId(MarkdownBlockType.latex, content, blockIndex),
-          type: MarkdownBlockType.latex,
-          content: content,
-          metadata: const <String, dynamic>{'inline': false},
-        ),
-        index + 1,
-      );
+        return _ParseResult(
+          MarkdownBlock(
+            id: _generateId(MarkdownBlockType.latex, content, blockIndex),
+            type: MarkdownBlockType.latex,
+            content: content,
+            metadata: const <String, dynamic>{'inline': false},
+          ),
+          index + 1,
+        );
       }
 
       while (j < lines.length) {
@@ -361,7 +361,7 @@ class IncrementalMarkdownParser {
 
     while (j < lines.length) {
       var line = lines[j];
-      
+
       // Check if line starts with expected indent
       if (indentLevel > 0) {
         if (!line.startsWith(indentPrefix)) {
@@ -369,7 +369,7 @@ class IncrementalMarkdownParser {
         }
         line = line.substring(indentPrefix.length);
       }
-      
+
       final match = pattern.firstMatch(line);
 
       if (match != null) {
@@ -397,13 +397,14 @@ class IncrementalMarkdownParser {
         // Check for nested lists (indented by 2 more spaces)
         if (j < lines.length) {
           final nextLine = lines[j];
-          final nestedIndent = indentPrefix + '  ';
-          
+          final nestedIndent = '$indentPrefix  ';
+
           if (nextLine.startsWith(nestedIndent)) {
             final strippedLine = nextLine.substring(nestedIndent.length);
             final nestedOrdered = _orderedListPattern.hasMatch(strippedLine);
-            final nestedUnordered = _unorderedListPattern.hasMatch(strippedLine);
-            
+            final nestedUnordered =
+                _unorderedListPattern.hasMatch(strippedLine);
+
             if (nestedOrdered || nestedUnordered) {
               // Parse nested list
               final nestedResult = _parseList(
@@ -413,9 +414,10 @@ class IncrementalMarkdownParser {
                 isOrdered: nestedOrdered,
                 indentLevel: indentLevel + 1,
               );
-              
+
               if (nestedResult.block != null) {
-                final nestedItems = nestedResult.block!.metadata['items'] as List<dynamic>?;
+                final nestedItems =
+                    nestedResult.block!.metadata['items'] as List<dynamic>?;
                 if (nestedItems != null) {
                   items.last['children'] = nestedItems;
                 }
@@ -429,14 +431,15 @@ class IncrementalMarkdownParser {
         // Handle continuation lines (indented content that's not a nested list)
         while (j < lines.length) {
           final nextLine = lines[j];
-          final contIndent = indentPrefix + '  ';
+          final contIndent = '$indentPrefix  ';
           if (nextLine.startsWith(contIndent)) {
             final strippedLine = nextLine.substring(contIndent.length);
             // Make sure it's not a list item
             if (!_orderedListPattern.hasMatch(strippedLine) &&
                 !_unorderedListPattern.hasMatch(strippedLine)) {
               final currentItem = items.last;
-              currentItem['content'] = '${currentItem['content']}\n$strippedLine';
+              currentItem['content'] =
+                  '${currentItem['content']}\n$strippedLine';
               j++;
             } else {
               break;
@@ -463,8 +466,9 @@ class IncrementalMarkdownParser {
       }
     }
 
-    final type =
-        isOrdered ? MarkdownBlockType.orderedList : MarkdownBlockType.unorderedList;
+    final type = isOrdered
+        ? MarkdownBlockType.orderedList
+        : MarkdownBlockType.unorderedList;
     final content = items.map((i) => i['content']).join('\n');
 
     return _ParseResult(
@@ -536,7 +540,9 @@ class IncrementalMarkdownParser {
   List<String> _parseTableRow(String line) {
     var trimmed = line.trim();
     if (trimmed.startsWith('|')) trimmed = trimmed.substring(1);
-    if (trimmed.endsWith('|')) trimmed = trimmed.substring(0, trimmed.length - 1);
+    if (trimmed.endsWith('|')) {
+      trimmed = trimmed.substring(0, trimmed.length - 1);
+    }
     return trimmed.split('|').map((c) => c.trim()).toList();
   }
 
@@ -588,7 +594,7 @@ class IncrementalMarkdownParser {
   static final _orderedListPattern = RegExp(r'^(\d+)\.\s+(.*)$');
   static final _unorderedListPattern = RegExp(r'^[-*+]\s+(.*)$');
   static final _taskListPattern = RegExp(r'^\[([xX ])\]\s+(.*)$');
-  static final _htmlBlockPattern = RegExp(r'^<([a-zA-Z][a-zA-Z0-9]*)[^>]*>');
+  static final _htmlBlockPattern = RegExp('^<([a-zA-Z][a-zA-Z0-9]*)[^>]*>');
 }
 
 class _ParseResult {

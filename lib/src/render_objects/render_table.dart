@@ -21,13 +21,13 @@ class RenderMarkdownTable extends RenderMarkdownBlock {
   List<double> _rowHeights = [];
 
   TableTheme get _tableTheme => theme.tableTheme ?? const TableTheme();
-  
+
   List<List<String>> get _rows {
     final rows = block.metadata['rows'] as List<dynamic>?;
     if (rows == null) return [];
     return rows.map((r) => (r as List<dynamic>).cast<String>()).toList();
   }
-  
+
   List<TableAlignment> get _alignments {
     final alignments = block.metadata['alignments'] as List<dynamic>?;
     if (alignments == null) return [];
@@ -62,9 +62,9 @@ class RenderMarkdownTable extends RenderMarkdownBlock {
     final rows = _rows;
     if (rows.isEmpty) return;
 
-    final cellPadding = _tableTheme.cellPadding ?? 
+    final cellPadding = _tableTheme.cellPadding ??
         const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
-    
+
     // First, create all painters to measure
     final numColumns = rows.isNotEmpty ? rows[0].length : 0;
     _columnWidths = List.filled(numColumns, 0);
@@ -77,23 +77,25 @@ class RenderMarkdownTable extends RenderMarkdownBlock {
 
       for (var colIndex = 0; colIndex < row.length; colIndex++) {
         final isHeader = rowIndex == 0;
-        
+
         // Get base text color from theme
         final baseTextColor = theme.textStyle?.color ?? const Color(0xFF1F2937);
-        
+
         final cellStyle = isHeader
-            ? (_tableTheme.headerTextStyle ?? TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: baseTextColor,
-              ))
-            : (_tableTheme.cellTextStyle ?? TextStyle(
-                fontSize: 14,
-                color: baseTextColor,
-              ));
-        
+            ? (_tableTheme.headerTextStyle ??
+                TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: baseTextColor,
+                ))
+            : (_tableTheme.cellTextStyle ??
+                TextStyle(
+                  fontSize: 14,
+                  color: baseTextColor,
+                ));
+
         // Ensure color is set if not specified in theme style
-        final styleWithColor = cellStyle.color == null 
+        final styleWithColor = cellStyle.color == null
             ? cellStyle.copyWith(color: baseTextColor)
             : cellStyle;
 
@@ -138,10 +140,14 @@ class RenderMarkdownTable extends RenderMarkdownBlock {
 
     // Re-layout painters with final widths
     for (var rowIndex = 0; rowIndex < _cellPainters.length; rowIndex++) {
-      for (var colIndex = 0; colIndex < _cellPainters[rowIndex].length; colIndex++) {
+      for (var colIndex = 0;
+          colIndex < _cellPainters[rowIndex].length;
+          colIndex++) {
         final painter = _cellPainters[rowIndex][colIndex];
         final cellPaddingHorizontal = cellPadding.horizontal;
-        painter.layout(maxWidth: _columnWidths[colIndex] - cellPaddingHorizontal);
+        painter.layout(
+          maxWidth: _columnWidths[colIndex] - cellPaddingHorizontal,
+        );
       }
     }
   }
@@ -161,10 +167,10 @@ class RenderMarkdownTable extends RenderMarkdownBlock {
   @override
   double computeIntrinsicHeight(double width) {
     _buildCellPainters(width);
-    
+
     final borderWidth = _tableTheme.borderWidth ?? 1;
-    return _rowHeights.fold<double>(0, (sum, h) => sum + h) + 
-           borderWidth * (_rowHeights.length + 1);
+    return _rowHeights.fold<double>(0, (sum, h) => sum + h) +
+        borderWidth * (_rowHeights.length + 1);
   }
 
   @override
@@ -177,7 +183,7 @@ class RenderMarkdownTable extends RenderMarkdownBlock {
     _cellPainters.clear();
     _columnWidths = [];
     _rowHeights = [];
-    
+
     final height = computeIntrinsicHeight(constraints.maxWidth);
     size = Size(constraints.maxWidth, height);
   }
@@ -189,9 +195,10 @@ class RenderMarkdownTable extends RenderMarkdownBlock {
 
     final borderWidth = _tableTheme.borderWidth ?? 1;
     final borderColor = _tableTheme.borderColor ?? const Color(0xFFE5E7EB);
-    final headerBgColor = _tableTheme.headerBackgroundColor ?? const Color(0xFFF9FAFB);
+    final headerBgColor =
+        _tableTheme.headerBackgroundColor ?? const Color(0xFFF9FAFB);
     final cellBgColor = _tableTheme.cellBackgroundColor;
-    final cellPadding = _tableTheme.cellPadding ?? 
+    final cellPadding = _tableTheme.cellPadding ??
         const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
 
     var currentY = offset.dy;
@@ -216,12 +223,15 @@ class RenderMarkdownTable extends RenderMarkdownBlock {
       }
 
       // Draw cells
-      for (var colIndex = 0; colIndex < _cellPainters[rowIndex].length; colIndex++) {
+      for (var colIndex = 0;
+          colIndex < _cellPainters[rowIndex].length;
+          colIndex++) {
         final painter = _cellPainters[rowIndex][colIndex];
         final cellWidth = _columnWidths[colIndex];
 
         // Draw cell border
-        final cellRect = Rect.fromLTWH(currentX, currentY, cellWidth, rowHeight);
+        final cellRect =
+            Rect.fromLTWH(currentX, currentY, cellWidth, rowHeight);
         canvas.drawRect(
           cellRect,
           Paint()
@@ -235,10 +245,8 @@ class RenderMarkdownTable extends RenderMarkdownBlock {
         switch (_getTextAlign(colIndex)) {
           case TextAlign.center:
             textX = currentX + (cellWidth - painter.width) / 2;
-            break;
           case TextAlign.right:
             textX = currentX + cellWidth - painter.width - cellPadding.right;
-            break;
           default:
             textX = currentX + cellPadding.left;
         }

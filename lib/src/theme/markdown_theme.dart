@@ -44,7 +44,8 @@ class MarkdownTheme {
       ),
       boldStyle: const TextStyle(fontWeight: FontWeight.bold),
       italicStyle: const TextStyle(fontStyle: FontStyle.italic),
-      strikethroughStyle: const TextStyle(decoration: TextDecoration.lineThrough),
+      strikethroughStyle:
+          const TextStyle(decoration: TextDecoration.lineThrough),
       headerTheme: const HeaderTheme(),
       codeTheme: CodeBlockTheme.light(),
       blockquoteTheme: const BlockquoteTheme(),
@@ -77,7 +78,8 @@ class MarkdownTheme {
       ),
       boldStyle: const TextStyle(fontWeight: FontWeight.bold),
       italicStyle: const TextStyle(fontStyle: FontStyle.italic),
-      strikethroughStyle: const TextStyle(decoration: TextDecoration.lineThrough),
+      strikethroughStyle:
+          const TextStyle(decoration: TextDecoration.lineThrough),
       headerTheme: HeaderTheme.dark(),
       codeTheme: CodeBlockTheme.dark(),
       blockquoteTheme: BlockquoteTheme.dark(),
@@ -154,7 +156,8 @@ class MarkdownTheme {
       blockquoteTheme: blockquoteTheme ?? defaultTheme.blockquoteTheme,
       tableTheme: tableTheme ?? defaultTheme.tableTheme,
       listTheme: listTheme ?? defaultTheme.listTheme,
-      horizontalRuleTheme: horizontalRuleTheme ?? defaultTheme.horizontalRuleTheme,
+      horizontalRuleTheme:
+          horizontalRuleTheme ?? defaultTheme.horizontalRuleTheme,
       blockSpacing: blockSpacing ?? defaultTheme.blockSpacing,
       paragraphSpacing: paragraphSpacing ?? defaultTheme.paragraphSpacing,
     );
@@ -216,37 +219,37 @@ class HeaderTheme {
   /// Creates a dark header theme.
   factory HeaderTheme.dark() {
     return const HeaderTheme(
-      h1Style: const TextStyle(
+      h1Style: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.bold,
         color: Color(0xFFF9FAFB),
         height: 1.3,
       ),
-      h2Style: const TextStyle(
+      h2Style: TextStyle(
         fontSize: 28,
         fontWeight: FontWeight.bold,
         color: Color(0xFFF9FAFB),
         height: 1.3,
       ),
-      h3Style: const TextStyle(
+      h3Style: TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.w600,
         color: Color(0xFFF3F4F6),
         height: 1.4,
       ),
-      h4Style: const TextStyle(
+      h4Style: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w600,
         color: Color(0xFFF3F4F6),
         height: 1.4,
       ),
-      h5Style: const TextStyle(
+      h5Style: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w500,
         color: Color(0xFFE5E7EB),
         height: 1.5,
       ),
-      h6Style: const TextStyle(
+      h6Style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w500,
         color: Color(0xFFD1D5DB),
@@ -702,8 +705,10 @@ class HorizontalRuleTheme {
 enum HorizontalRuleStyle {
   /// Solid line.
   solid,
+
   /// Dashed line.
   dashed,
+
   /// Dotted line.
   dotted,
 }

@@ -5,7 +5,8 @@ import 'base/render_markdown_block.dart';
 import 'mixins/selectable_text_mixin.dart';
 
 /// Renders a paragraph block.
-class RenderMarkdownParagraph extends RenderMarkdownBlock with SelectableTextMixin {
+class RenderMarkdownParagraph extends RenderMarkdownBlock
+    with SelectableTextMixin {
   /// Creates a new render paragraph.
   RenderMarkdownParagraph({
     required super.block,
@@ -59,10 +60,10 @@ class RenderMarkdownParagraph extends RenderMarkdownBlock with SelectableTextMix
   void performLayout() {
     _textPainter?.dispose();
     _textPainter = null;
-    
+
     final painter = _getTextPainter(constraints.maxWidth);
     size = Size(constraints.maxWidth, painter.height);
-    
+
     // Initialize selectable after layout
     initSelectableIfNeeded();
   }
@@ -71,7 +72,7 @@ class RenderMarkdownParagraph extends RenderMarkdownBlock with SelectableTextMix
   void paint(PaintingContext context, Offset offset) {
     // Paint selection highlight first
     paintSelection(context, offset);
-    
+
     final painter = _getTextPainter(constraints.maxWidth);
     painter.paint(context.canvas, offset);
   }
@@ -85,20 +86,20 @@ class RenderMarkdownParagraph extends RenderMarkdownBlock with SelectableTextMix
   @override
   String? getLinkAtPosition(Offset position) {
     if (_textPainter == null) return null;
-    
+
     final textPosition = _textPainter!.getPositionForOffset(position);
     final span = _textPainter!.text;
-    
+
     return _findLinkInSpan(span, textPosition.offset);
   }
 
   String? _findLinkInSpan(InlineSpan? span, int offset) {
     if (span == null) return null;
-    
+
     if (span is TextSpan) {
       final text = span.text;
       final children = span.children;
-      
+
       if (text != null) {
         if (offset < text.length) {
           // Check if this span has a recognizer (is a link)
@@ -110,12 +111,12 @@ class RenderMarkdownParagraph extends RenderMarkdownBlock with SelectableTextMix
         }
         offset -= text.length;
       }
-      
+
       if (children != null) {
         for (final child in children) {
           final result = _findLinkInSpan(child, offset);
           if (result != null) return result;
-          
+
           if (child is TextSpan) {
             final childLength = _getSpanLength(child);
             if (offset < childLength) {
@@ -128,7 +129,7 @@ class RenderMarkdownParagraph extends RenderMarkdownBlock with SelectableTextMix
         }
       }
     }
-    
+
     return null;
   }
 
@@ -152,7 +153,7 @@ class RenderMarkdownParagraph extends RenderMarkdownBlock with SelectableTextMix
     if (event is PointerDownEvent && _textPainter != null) {
       final position = event.localPosition;
       final textPosition = _textPainter!.getPositionForOffset(position);
-      
+
       // Delegate to the text span's gesture recognizers
       final span = _textPainter!.text;
       if (span is TextSpan) {
@@ -163,15 +164,16 @@ class RenderMarkdownParagraph extends RenderMarkdownBlock with SelectableTextMix
 
   void _handleTapOnSpan(TextSpan span, int offset) {
     final text = span.text;
-    
+
     if (text != null) {
       if (offset < text.length) {
-        span.recognizer?.addPointer(PointerDownEvent(position: Offset.zero));
+        span.recognizer
+            ?.addPointer(const PointerDownEvent(position: Offset.zero));
         return;
       }
       offset -= text.length;
     }
-    
+
     if (span.children != null) {
       for (final child in span.children!) {
         if (child is TextSpan) {

@@ -7,7 +7,8 @@ import 'base/render_markdown_block.dart';
 import 'mixins/selectable_text_mixin.dart';
 
 /// Renders a code block with syntax highlighting.
-class RenderMarkdownCodeBlock extends RenderMarkdownBlock with SelectableTextMixin {
+class RenderMarkdownCodeBlock extends RenderMarkdownBlock
+    with SelectableTextMixin {
   /// Creates a new render code block.
   RenderMarkdownCodeBlock({
     required super.block,
@@ -22,7 +23,7 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock with SelectableTextMix
   TextPainter? _codePainter;
   TextPainter? _labelPainter;
   final _highlighter = const SyntaxHighlighter();
-  
+
   bool _isHoveringCopy = false;
   Rect? _copyButtonRect;
   Offset _textOffset = Offset.zero;
@@ -49,11 +50,12 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock with SelectableTextMix
   TextPainter _getCodePainter(double maxWidth) {
     if (_codePainter != null) return _codePainter!;
 
-    final codeStyle = _codeTheme.textStyle ?? const TextStyle(
-      fontFamily: 'monospace',
-      fontSize: 14,
-    );
-    
+    final codeStyle = _codeTheme.textStyle ??
+        const TextStyle(
+          fontFamily: 'monospace',
+          fontSize: 14,
+        );
+
     final syntaxTheme = _codeTheme.syntaxTheme ?? SyntaxTheme.light();
     final spans = _highlighter.highlight(
       block.content,
@@ -81,10 +83,11 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock with SelectableTextMix
       return _labelPainter!;
     }
 
-    final labelStyle = _codeTheme.labelStyle ?? const TextStyle(
-      fontSize: 12,
-      color: Color(0xFF6B7280),
-    );
+    final labelStyle = _codeTheme.labelStyle ??
+        const TextStyle(
+          fontSize: 12,
+          color: Color(0xFF6B7280),
+        );
 
     _labelPainter = TextPainter(
       text: TextSpan(text: _language, style: labelStyle),
@@ -99,12 +102,12 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock with SelectableTextMix
     final padding = _codeTheme.padding ?? const EdgeInsets.all(16);
     final codePainter = _getCodePainter(width);
     final labelPainter = _getLabelPainter();
-    
+
     var height = padding.vertical + codePainter.height;
     if (_language.isNotEmpty) {
       height += labelPainter.height + 8; // Label + spacing
     }
-    
+
     return height;
   }
 
@@ -114,10 +117,10 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock with SelectableTextMix
     _codePainter = null;
     _labelPainter?.dispose();
     _labelPainter = null;
-    
+
     final height = computeIntrinsicHeight(constraints.maxWidth);
     size = Size(constraints.maxWidth, height);
-    
+
     // Calculate copy button rect
     const buttonSize = 32.0;
     _copyButtonRect = Rect.fromLTWH(
@@ -135,7 +138,7 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock with SelectableTextMix
       offsetY += labelPainter.height + 8;
     }
     _textOffset = Offset(padding.left, offsetY);
-    
+
     // Initialize selectable after layout
     initSelectableIfNeeded();
   }
@@ -145,7 +148,8 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock with SelectableTextMix
     final canvas = context.canvas;
     final padding = _codeTheme.padding ?? const EdgeInsets.all(16);
     final borderRadius = _codeTheme.borderRadius ?? 8.0;
-    final backgroundColor = _codeTheme.backgroundColor ?? const Color(0xFFF3F4F6);
+    final backgroundColor =
+        _codeTheme.backgroundColor ?? const Color(0xFFF3F4F6);
 
     // Draw background
     final rect = offset & size;
@@ -162,14 +166,12 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock with SelectableTextMix
 
     // Draw language label
     if (_language.isNotEmpty) {
-      final labelPainter = _getLabelPainter();
-      labelPainter.paint(canvas, contentOffset);
+      final labelPainter = _getLabelPainter()..paint(canvas, contentOffset);
       contentOffset = contentOffset.translate(0, labelPainter.height + 8);
     }
 
     // Draw code
-    final codePainter = _getCodePainter(constraints.maxWidth);
-    codePainter.paint(canvas, contentOffset);
+    _getCodePainter(constraints.maxWidth).paint(canvas, contentOffset);
 
     // Draw copy button
     _drawCopyButton(canvas, offset);
@@ -185,9 +187,11 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock with SelectableTextMix
     if (_copyButtonRect == null) return;
 
     final buttonRect = _copyButtonRect!.shift(offset);
-    final buttonColor = _isHoveringCopy 
-        ? (_codeTheme.copyButtonColor ?? const Color(0xFF6B7280)).withValues(alpha: 0.8)
-        : (_codeTheme.copyButtonColor ?? const Color(0xFF6B7280)).withValues(alpha: 0.5);
+    final buttonColor = _isHoveringCopy
+        ? (_codeTheme.copyButtonColor ?? const Color(0xFF6B7280))
+            .withValues(alpha: 0.8)
+        : (_codeTheme.copyButtonColor ?? const Color(0xFF6B7280))
+            .withValues(alpha: 0.5);
 
     // Draw button background on hover
     if (_isHoveringCopy) {
@@ -203,36 +207,58 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock with SelectableTextMix
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
 
-    final iconSize = 16.0;
-    final iconOffset = buttonRect.center - Offset(iconSize / 2, iconSize / 2);
-    
+    const iconSize = 16.0;
+    final iconOffset =
+        buttonRect.center - const Offset(iconSize / 2, iconSize / 2);
+
     // Back rectangle
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(iconOffset.dx + 3, iconOffset.dy, iconSize - 3, iconSize - 3),
-        const Radius.circular(2),
-      ),
-      iconPaint,
-    );
-    
-    // Front rectangle
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(iconOffset.dx, iconOffset.dy + 3, iconSize - 3, iconSize - 3),
-        const Radius.circular(2),
-      ),
-      iconPaint..style = PaintingStyle.fill..color = backgroundColor,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(iconOffset.dx, iconOffset.dy + 3, iconSize - 3, iconSize - 3),
-        const Radius.circular(2),
-      ),
-      iconPaint..style = PaintingStyle.stroke..color = buttonColor,
-    );
+    canvas
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            iconOffset.dx + 3,
+            iconOffset.dy,
+            iconSize - 3,
+            iconSize - 3,
+          ),
+          const Radius.circular(2),
+        ),
+        iconPaint,
+      )
+
+      // Front rectangle
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            iconOffset.dx,
+            iconOffset.dy + 3,
+            iconSize - 3,
+            iconSize - 3,
+          ),
+          const Radius.circular(2),
+        ),
+        iconPaint
+          ..style = PaintingStyle.fill
+          ..color = backgroundColor,
+      )
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            iconOffset.dx,
+            iconOffset.dy + 3,
+            iconSize - 3,
+            iconSize - 3,
+          ),
+          const Radius.circular(2),
+        ),
+        iconPaint
+          ..style = PaintingStyle.stroke
+          ..color = buttonColor,
+      );
   }
 
-  Color get backgroundColor => _codeTheme.backgroundColor ?? const Color(0xFFF3F4F6);
+  Color get backgroundColor =>
+      _codeTheme.backgroundColor ?? const Color(0xFFF3F4F6);
 
   @override
   bool hitTestSelf(Offset position) => true;

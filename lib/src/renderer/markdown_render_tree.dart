@@ -31,10 +31,11 @@ class MarkdownRenderTree {
   List<MarkdownBlock> _previousBlocks = [];
 
   /// Gets the current render objects.
-  List<RenderMarkdownBlock> get renderObjects => List.unmodifiable(_renderObjects);
+  List<RenderMarkdownBlock> get renderObjects =>
+      List.unmodifiable(_renderObjects);
 
   /// Updates the tree with new blocks, performing intelligent diffing.
-  /// 
+  ///
   /// Returns true if the tree was modified.
   bool update(List<MarkdownBlock> newBlocks) {
     if (_areBlocksEqual(newBlocks, _previousBlocks)) {
@@ -46,7 +47,7 @@ class MarkdownRenderTree {
 
     for (final block in newBlocks) {
       final existingRenderObject = _blockMap[block.id];
-      
+
       if (existingRenderObject != null) {
         // Update existing render object
         BlockRegistry.updateRenderObject(
@@ -81,11 +82,11 @@ class MarkdownRenderTree {
     _renderObjects
       ..clear()
       ..addAll(newRenderObjects);
-    
+
     _blockMap
       ..clear()
       ..addAll(newBlockMap);
-    
+
     _previousBlocks = List.of(newBlocks);
 
     return true;
@@ -94,7 +95,7 @@ class MarkdownRenderTree {
   /// Updates the theme for all render objects.
   void updateTheme(MarkdownTheme newTheme) {
     if (theme == newTheme) return;
-    
+
     theme = newTheme;
     for (final renderObject in _renderObjects) {
       renderObject.theme = newTheme;
@@ -108,7 +109,7 @@ class MarkdownRenderTree {
   }) {
     this.onLinkTapped = onLinkTapped;
     this.onCheckboxTapped = onCheckboxTapped;
-    
+
     for (final renderObject in _renderObjects) {
       renderObject
         ..onLinkTapped = onLinkTapped

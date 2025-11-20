@@ -6,7 +6,8 @@ import 'base/render_markdown_block.dart';
 import 'mixins/selectable_text_mixin.dart';
 
 /// Renders a header block (H1-H6).
-class RenderMarkdownHeader extends RenderMarkdownBlock with SelectableTextMixin {
+class RenderMarkdownHeader extends RenderMarkdownBlock
+    with SelectableTextMixin {
   /// Creates a new render header.
   RenderMarkdownHeader({
     required super.block,
@@ -38,7 +39,7 @@ class RenderMarkdownHeader extends RenderMarkdownBlock with SelectableTextMixin 
 
     final headerTheme = theme.headerTheme ?? const HeaderTheme();
     final baseStyle = headerTheme.getStyleForLevel(_level);
-    
+
     final span = _spanBuilder.build(
       block.content,
       baseStyle,
@@ -64,10 +65,10 @@ class RenderMarkdownHeader extends RenderMarkdownBlock with SelectableTextMixin 
   void performLayout() {
     _textPainter?.dispose();
     _textPainter = null;
-    
+
     final painter = _getTextPainter(constraints.maxWidth);
     size = Size(constraints.maxWidth, painter.height);
-    
+
     // Initialize selectable after layout
     initSelectableIfNeeded();
   }
@@ -76,7 +77,7 @@ class RenderMarkdownHeader extends RenderMarkdownBlock with SelectableTextMixin 
   void paint(PaintingContext context, Offset offset) {
     // Paint selection highlight first
     paintSelection(context, offset);
-    
+
     final painter = _getTextPainter(constraints.maxWidth);
     painter.paint(context.canvas, offset);
   }

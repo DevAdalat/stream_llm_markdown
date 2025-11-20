@@ -44,7 +44,7 @@ mixin SelectableTextMixin on RenderBox {
   /// Initializes the selectable fragment after layout.
   void initSelectableIfNeeded() {
     if (!_selectionEnabled || _registrar == null) return;
-    
+
     if (_selectable == null) {
       _initSelectable();
     } else {
@@ -55,7 +55,7 @@ mixin SelectableTextMixin on RenderBox {
   void _initSelectable() {
     final painter = selectableTextPainter;
     if (painter == null) return;
-    
+
     _selectable = _SelectableFragment(
       paragraph: this,
     );
@@ -74,17 +74,20 @@ mixin SelectableTextMixin on RenderBox {
   void paintSelection(PaintingContext context, Offset offset) {
     final selection = _selectable?._textSelectionStart;
     final selectionEnd = _selectable?._textSelectionEnd;
-    
+
     if (selection == null || selectionEnd == null) return;
-    
+
     final painter = selectableTextPainter;
     if (painter == null) return;
-    
+
     const selectionColor = Color(0x663399FF);
     final boxes = painter.getBoxesForSelection(
-      TextSelection(baseOffset: selection.offset, extentOffset: selectionEnd.offset),
+      TextSelection(
+        baseOffset: selection.offset,
+        extentOffset: selectionEnd.offset,
+      ),
     );
-    
+
     for (final box in boxes) {
       context.canvas.drawRect(
         box.toRect().shift(offset + textPaintOffset),
@@ -111,7 +114,7 @@ class _SelectableFragment implements Selectable {
 
   TextPosition? _textSelectionStart;
   TextPosition? _textSelectionEnd;
-  
+
   final List<VoidCallback> _listeners = [];
   SelectionGeometry _value = const SelectionGeometry(
     status: SelectionStatus.none,
@@ -150,10 +153,12 @@ class _SelectableFragment implements Selectable {
     final startOffset = _getOffsetForPosition(_textSelectionStart!);
     final endOffset = _getOffsetForPosition(_textSelectionEnd!);
 
-    final isCollapsed = _textSelectionStart!.offset == _textSelectionEnd!.offset;
+    final isCollapsed =
+        _textSelectionStart!.offset == _textSelectionEnd!.offset;
 
     _value = SelectionGeometry(
-      status: isCollapsed ? SelectionStatus.collapsed : SelectionStatus.uncollapsed,
+      status:
+          isCollapsed ? SelectionStatus.collapsed : SelectionStatus.uncollapsed,
       hasContent: painter.plainText.isNotEmpty,
       startSelectionPoint: SelectionPoint(
         localPosition: startOffset,
@@ -185,7 +190,8 @@ class _SelectableFragment implements Selectable {
     final painter = paragraph.selectableTextPainter;
     if (painter == null) return Offset.zero;
     // Return local position (relative to this render object)
-    return painter.getOffsetForCaret(position, Rect.zero) + paragraph.textPaintOffset;
+    return painter.getOffsetForCaret(position, Rect.zero) +
+        paragraph.textPaintOffset;
   }
 
   @override
@@ -242,16 +248,18 @@ class _SelectableFragment implements Selectable {
     final transform = paragraph.getTransformTo(null);
     final invertedTransform = Matrix4.tryInvert(transform);
     if (invertedTransform == null) return SelectionResult.none;
-    
-    final localPosition = MatrixUtils.transformPoint(invertedTransform, event.globalPosition) - paragraph.textPaintOffset;
-    
+
+    final localPosition =
+        MatrixUtils.transformPoint(invertedTransform, event.globalPosition) -
+            paragraph.textPaintOffset;
+
     // Check if position is within this block's bounds
     final isAbove = localPosition.dy < 0;
     final isBelow = localPosition.dy > paragraph.size.height;
-    
+
     final isStartEdge = event.type == SelectionEventType.startEdgeUpdate;
     final textLength = painter.plainText.length;
-    
+
     if (isAbove) {
       // Position is above this block
       if (isStartEdge) {
@@ -282,7 +290,7 @@ class _SelectableFragment implements Selectable {
       // Position is within this block
       final clampedPosition = _clampOffset(localPosition);
       final textPosition = painter.getPositionForOffset(clampedPosition);
-      
+
       if (isStartEdge) {
         _textSelectionStart = textPosition;
         // For blocks where start is set within, end should default to end of block
@@ -333,14 +341,16 @@ class _SelectableFragment implements Selectable {
     final transform = paragraph.getTransformTo(null);
     final invertedTransform = Matrix4.tryInvert(transform);
     if (invertedTransform == null) return SelectionResult.none;
-    
-    final localPosition = MatrixUtils.transformPoint(invertedTransform, globalPosition) - paragraph.textPaintOffset;
+
+    final localPosition =
+        MatrixUtils.transformPoint(invertedTransform, globalPosition) -
+            paragraph.textPaintOffset;
     final position = painter.getPositionForOffset(localPosition);
     final word = painter.getWordBoundary(position);
 
     _textSelectionStart = TextPosition(offset: word.start);
     _textSelectionEnd = TextPosition(offset: word.end);
-    
+
     return SelectionResult.end;
   }
 
@@ -351,7 +361,7 @@ class _SelectableFragment implements Selectable {
     // Select all text in this paragraph
     _textSelectionStart = const TextPosition(offset: 0);
     _textSelectionEnd = TextPosition(offset: painter.plainText.length);
-    
+
     return SelectionResult.end;
   }
 
@@ -381,7 +391,8 @@ class _SelectableFragment implements Selectable {
             : TextPosition(offset: wordBoundary.start);
       case TextGranularity.line:
         final lineMetrics = painter.computeLineMetrics();
-        final currentOffset = painter.getOffsetForCaret(targetPosition, Rect.zero);
+        final currentOffset =
+            painter.getOffsetForCaret(targetPosition, Rect.zero);
         var currentLine = 0;
         for (var i = 0; i < lineMetrics.length; i++) {
           if (currentOffset.dy <= lineMetrics[i].baseline) {
@@ -390,13 +401,15 @@ class _SelectableFragment implements Selectable {
           }
         }
         if (forward && currentLine < lineMetrics.length - 1) {
-          final nextLineY = lineMetrics[currentLine + 1].baseline - 
+          final nextLineY = lineMetrics[currentLine + 1].baseline -
               lineMetrics[currentLine + 1].ascent;
-          newPosition = painter.getPositionForOffset(Offset(currentOffset.dx, nextLineY));
+          newPosition =
+              painter.getPositionForOffset(Offset(currentOffset.dx, nextLineY));
         } else if (!forward && currentLine > 0) {
-          final prevLineY = lineMetrics[currentLine - 1].baseline - 
+          final prevLineY = lineMetrics[currentLine - 1].baseline -
               lineMetrics[currentLine - 1].ascent;
-          newPosition = painter.getPositionForOffset(Offset(currentOffset.dx, prevLineY));
+          newPosition =
+              painter.getPositionForOffset(Offset(currentOffset.dx, prevLineY));
         } else {
           newPosition = targetPosition;
         }
@@ -428,9 +441,9 @@ class _SelectableFragment implements Selectable {
     if (targetPosition == null) return SelectionResult.none;
 
     final currentOffset = painter.getOffsetForCaret(targetPosition, Rect.zero);
-    
+
     TextPosition newPosition;
-    
+
     switch (direction) {
       case SelectionExtendDirection.previousLine:
         final newY = currentOffset.dy - painter.preferredLineHeight;
@@ -441,7 +454,8 @@ class _SelectableFragment implements Selectable {
         if (newY > paragraph.size.height) return SelectionResult.next;
         newPosition = painter.getPositionForOffset(Offset(dx, newY));
       case SelectionExtendDirection.forward:
-        final newOffset = math.min(targetPosition.offset + 1, painter.plainText.length);
+        final newOffset =
+            math.min(targetPosition.offset + 1, painter.plainText.length);
         newPosition = TextPosition(offset: newOffset);
       case SelectionExtendDirection.backward:
         final newOffset = math.max(targetPosition.offset - 1, 0);
@@ -460,13 +474,13 @@ class _SelectableFragment implements Selectable {
   @override
   SelectedContent? getSelectedContent() {
     if (_textSelectionStart == null || _textSelectionEnd == null) return null;
-    
+
     final painter = paragraph.selectableTextPainter;
     if (painter == null) return null;
 
     final start = _textSelectionStart!.offset;
     final end = _textSelectionEnd!.offset;
-    
+
     if (start == end) return null;
 
     final text = painter.plainText;

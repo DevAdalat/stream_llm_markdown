@@ -47,7 +47,8 @@ abstract class RenderMarkdownBlock extends RenderBox {
   }
 
   /// Callback when a checkbox is tapped.
-  void Function(int index, bool checked)? get onCheckboxTapped => _onCheckboxTapped;
+  void Function(int index, bool checked)? get onCheckboxTapped =>
+      _onCheckboxTapped;
   void Function(int index, bool checked)? _onCheckboxTapped;
   set onCheckboxTapped(void Function(int index, bool checked)? value) {
     if (_onCheckboxTapped == value) return;
@@ -56,17 +57,15 @@ abstract class RenderMarkdownBlock extends RenderBox {
 
   /// Cached text painter for performance.
   TextPainter? _cachedTextPainter;
-  
+
   /// Cached paragraph for performance.
   ui.Paragraph? _cachedParagraph;
-  
+
   /// Last constraints used for layout.
   BoxConstraints? _lastConstraints;
 
   /// Whether the cached layout is still valid.
-  bool get isCacheValid => 
-      _cachedParagraph != null && 
-      _lastConstraints != null;
+  bool get isCacheValid => _cachedParagraph != null && _lastConstraints != null;
 
   /// Invalidates the cached layout.
   void invalidateCache() {
@@ -88,15 +87,18 @@ abstract class RenderMarkdownBlock extends RenderBox {
   @override
   void performLayout() {
     final newConstraints = constraints;
-    
+
     // Check if we can reuse cached layout
     if (_lastConstraints != null &&
         _lastConstraints!.maxWidth == newConstraints.maxWidth &&
         isCacheValid) {
-      size = Size(newConstraints.maxWidth, computeIntrinsicHeight(newConstraints.maxWidth));
+      size = Size(
+        newConstraints.maxWidth,
+        computeIntrinsicHeight(newConstraints.maxWidth),
+      );
       return;
     }
-    
+
     _lastConstraints = newConstraints;
     size = computeSize(newConstraints);
   }
@@ -117,10 +119,12 @@ abstract class RenderMarkdownBlock extends RenderBox {
   double computeMaxIntrinsicWidth(double height) => double.infinity;
 
   @override
-  double computeMinIntrinsicHeight(double width) => computeIntrinsicHeight(width);
+  double computeMinIntrinsicHeight(double width) =>
+      computeIntrinsicHeight(width);
 
   @override
-  double computeMaxIntrinsicHeight(double width) => computeIntrinsicHeight(width);
+  double computeMaxIntrinsicHeight(double width) =>
+      computeIntrinsicHeight(width);
 
   @override
   bool hitTestSelf(Offset position) => true;

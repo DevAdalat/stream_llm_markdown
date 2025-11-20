@@ -21,12 +21,14 @@ class RenderMarkdownList extends RenderMarkdownBlock {
   final List<_NestedListInfo> _nestedLists = [];
 
   ListTheme get _listTheme => theme.listTheme ?? const ListTheme();
-  
+
   bool get _isOrdered => block.type == MarkdownBlockType.orderedList;
-  
-  List<Map<String, dynamic>> get _items => 
-      (block.metadata['items'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
-  
+
+  List<Map<String, dynamic>> get _items =>
+      (block.metadata['items'] as List<dynamic>?)
+          ?.cast<Map<String, dynamic>>() ??
+      [];
+
   int get _start => (block.metadata['start'] as int?) ?? 1;
 
   @override
@@ -92,20 +94,25 @@ class RenderMarkdownList extends RenderMarkdownBlock {
           final nestedPainter = TextPainter(
             text: nestedSpan,
             textDirection: TextDirection.ltr,
-          )..layout(maxWidth: nestedAvailableWidth > 0 ? nestedAvailableWidth : 0);
+          )..layout(
+              maxWidth: nestedAvailableWidth > 0 ? nestedAvailableWidth : 0,
+            );
 
           nestedPainters.add(nestedPainter);
         }
 
         // Determine if nested list is ordered by checking if any item looks ordered
-        final isNestedOrdered = false; // Nested lists inherit unordered by default
+        const isNestedOrdered =
+            false; // Nested lists inherit unordered by default
 
-        _nestedLists.add(_NestedListInfo(
-          itemIndex: i,
-          items: nestedItems,
-          isOrdered: isNestedOrdered,
-          painters: nestedPainters,
-        ));
+        _nestedLists.add(
+          _NestedListInfo(
+            itemIndex: i,
+            items: nestedItems,
+            isOrdered: isNestedOrdered,
+            painters: nestedPainters,
+          ),
+        );
       }
     }
   }
@@ -113,27 +120,28 @@ class RenderMarkdownList extends RenderMarkdownBlock {
   @override
   double computeIntrinsicHeight(double width) {
     _buildItemPainters(width);
-    
+
     final itemSpacing = _listTheme.itemSpacing ?? 4;
     var height = 0.0;
-    
+
     for (var i = 0; i < _itemPainters.length; i++) {
       height += _itemPainters[i].height;
-      
+
       // Add height for nested list if present
-      final nestedList = _nestedLists.where((n) => n.itemIndex == i).firstOrNull;
+      final nestedList =
+          _nestedLists.where((n) => n.itemIndex == i).firstOrNull;
       if (nestedList != null) {
         for (var j = 0; j < nestedList.painters.length; j++) {
           height += itemSpacing;
           height += nestedList.painters[j].height;
         }
       }
-      
+
       if (i < _itemPainters.length - 1) {
         height += itemSpacing;
       }
     }
-    
+
     return height;
   }
 
@@ -145,7 +153,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
     _itemPainters.clear();
     _checkboxRects.clear();
     _disposeNestedLists();
-    
+
     final height = computeIntrinsicHeight(constraints.maxWidth);
     size = Size(constraints.maxWidth, height);
   }
@@ -156,32 +164,33 @@ class RenderMarkdownList extends RenderMarkdownBlock {
     final indentWidth = _listTheme.indentWidth ?? 24;
     final itemSpacing = _listTheme.itemSpacing ?? 4;
     final bulletColor = _listTheme.bulletColor ?? const Color(0xFF6B7280);
-    
+
     _buildItemPainters(constraints.maxWidth);
     _checkboxRects.clear();
 
     var currentY = offset.dy;
-    
+
     for (var i = 0; i < _itemPainters.length; i++) {
       final item = _items[i];
       final painter = _itemPainters[i];
       final isChecked = item['checked'] as bool?;
-      
+
       // Calculate vertical center for bullet/number
       final bulletY = currentY + painter.height / 2;
-      
+
       if (isChecked != null) {
         // Task list item - draw checkbox
-        final checkboxSize = 16.0;
+        const checkboxSize = 16.0;
         final checkboxX = offset.dx + (indentWidth - checkboxSize) / 2;
         final checkboxY = bulletY - checkboxSize / 2;
-        final checkboxRect = Rect.fromLTWH(checkboxX, checkboxY, checkboxSize, checkboxSize);
+        final checkboxRect =
+            Rect.fromLTWH(checkboxX, checkboxY, checkboxSize, checkboxSize);
         _checkboxRects.add(checkboxRect);
-        
-        final checkboxColor = isChecked 
+
+        final checkboxColor = isChecked
             ? (_listTheme.checkboxCheckedColor ?? const Color(0xFF2563EB))
             : (_listTheme.checkboxUncheckedColor ?? const Color(0xFF6B7280));
-        
+
         // Draw checkbox
         canvas.drawRRect(
           RRect.fromRectAndRadius(checkboxRect, const Radius.circular(3)),
@@ -190,14 +199,14 @@ class RenderMarkdownList extends RenderMarkdownBlock {
             ..style = isChecked ? PaintingStyle.fill : PaintingStyle.stroke
             ..strokeWidth = 1.5,
         );
-        
+
         // Draw checkmark if checked
         if (isChecked) {
           final path = Path()
             ..moveTo(checkboxX + 3, bulletY)
             ..lineTo(checkboxX + 6, bulletY + 3)
             ..lineTo(checkboxX + 12, bulletY - 4);
-          
+
           canvas.drawPath(
             path,
             Paint()
@@ -221,7 +230,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
           ),
           textDirection: TextDirection.ltr,
         )..layout();
-        
+
         numberPainter.paint(
           canvas,
           Offset(
@@ -238,50 +247,57 @@ class RenderMarkdownList extends RenderMarkdownBlock {
           Paint()..color = bulletColor,
         );
       }
-      
+
       // Draw item text
       painter.paint(canvas, Offset(offset.dx + indentWidth, currentY));
-      
+
       currentY += painter.height;
-      
+
       // Draw nested list if present
-      final nestedList = _nestedLists.where((n) => n.itemIndex == i).firstOrNull;
+      final nestedList =
+          _nestedLists.where((n) => n.itemIndex == i).firstOrNull;
       if (nestedList != null) {
         final nestedIndentWidth = indentWidth * 2;
-        
+
         for (var j = 0; j < nestedList.painters.length; j++) {
           currentY += itemSpacing;
-          
+
           final nestedItem = nestedList.items[j];
           final nestedPainter = nestedList.painters[j];
           final nestedBulletY = currentY + nestedPainter.height / 2;
           final nestedIsChecked = nestedItem['checked'] as bool?;
-          
+
           if (nestedIsChecked != null) {
             // Nested task list item - draw checkbox
             const checkboxSize = 16.0;
-            final checkboxX = offset.dx + nestedIndentWidth - indentWidth + (indentWidth - checkboxSize) / 2;
+            final checkboxX = offset.dx +
+                nestedIndentWidth -
+                indentWidth +
+                (indentWidth - checkboxSize) / 2;
             final checkboxY = nestedBulletY - checkboxSize / 2;
-            final checkboxRect = Rect.fromLTWH(checkboxX, checkboxY, checkboxSize, checkboxSize);
-            
-            final checkboxColor = nestedIsChecked 
+            final checkboxRect =
+                Rect.fromLTWH(checkboxX, checkboxY, checkboxSize, checkboxSize);
+
+            final checkboxColor = nestedIsChecked
                 ? (_listTheme.checkboxCheckedColor ?? const Color(0xFF2563EB))
-                : (_listTheme.checkboxUncheckedColor ?? const Color(0xFF6B7280));
-            
+                : (_listTheme.checkboxUncheckedColor ??
+                    const Color(0xFF6B7280));
+
             canvas.drawRRect(
               RRect.fromRectAndRadius(checkboxRect, const Radius.circular(3)),
               Paint()
                 ..color = checkboxColor
-                ..style = nestedIsChecked ? PaintingStyle.fill : PaintingStyle.stroke
+                ..style =
+                    nestedIsChecked ? PaintingStyle.fill : PaintingStyle.stroke
                 ..strokeWidth = 1.5,
             );
-            
+
             if (nestedIsChecked) {
               final path = Path()
                 ..moveTo(checkboxX + 3, nestedBulletY)
                 ..lineTo(checkboxX + 6, nestedBulletY + 3)
                 ..lineTo(checkboxX + 12, nestedBulletY - 4);
-              
+
               canvas.drawPath(
                 path,
                 Paint()
@@ -305,7 +321,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
               ),
               textDirection: TextDirection.ltr,
             )..layout();
-            
+
             numberPainter.paint(
               canvas,
               Offset(
@@ -317,18 +333,24 @@ class RenderMarkdownList extends RenderMarkdownBlock {
           } else {
             // Nested unordered list - draw smaller bullet
             canvas.drawCircle(
-              Offset(offset.dx + nestedIndentWidth - indentWidth / 2, nestedBulletY),
+              Offset(
+                offset.dx + nestedIndentWidth - indentWidth / 2,
+                nestedBulletY,
+              ),
               2.5,
               Paint()..color = bulletColor,
             );
           }
-          
+
           // Draw nested item text
-          nestedPainter.paint(canvas, Offset(offset.dx + nestedIndentWidth, currentY));
+          nestedPainter.paint(
+            canvas,
+            Offset(offset.dx + nestedIndentWidth, currentY),
+          );
           currentY += nestedPainter.height;
         }
       }
-      
+
       currentY += itemSpacing;
     }
   }

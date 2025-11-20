@@ -34,9 +34,8 @@ class RenderMarkdownLatex extends RenderMarkdownBlock {
       backgroundColor: const Color(0xFFF3F4F6),
     );
 
-    final displayText = _isInline 
-        ? '\$${block.content}\$'
-        : '\$\$\n${block.content}\n\$\$';
+    final displayText =
+        _isInline ? '\$${block.content}\$' : '\$\$\n${block.content}\n\$\$';
 
     _textPainter = TextPainter(
       text: TextSpan(text: displayText, style: style),
@@ -57,7 +56,7 @@ class RenderMarkdownLatex extends RenderMarkdownBlock {
   void performLayout() {
     _textPainter?.dispose();
     _textPainter = null;
-    
+
     final height = computeIntrinsicHeight(constraints.maxWidth);
     size = Size(constraints.maxWidth, height);
   }
@@ -82,8 +81,8 @@ class RenderMarkdownLatex extends RenderMarkdownBlock {
     }
 
     // Center the text for block latex
-    final textOffset = _isInline 
-        ? offset 
+    final textOffset = _isInline
+        ? offset
         : Offset(
             offset.dx + (size.width - painter.width) / 2,
             offset.dy + 12,

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart' show SelectionArea;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
@@ -29,17 +30,18 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
     this.cursorBlinkDuration = const Duration(milliseconds: 500),
     this.scrollController,
     this.autoScrollToBottom = true,
-    this.selectionEnabled = false, // Disabled for now - selection implementation in progress
+    this.selectionEnabled =
+        false, // Disabled for now - selection implementation in progress
     super.key,
   });
 
   /// Whether text selection is enabled.
-  /// 
+  ///
   /// When true, users can select text with gestures like:
   /// - Double-tap to select a word
   /// - Triple-tap to select a paragraph
   /// - Long press and drag to select text
-  /// 
+  ///
   /// This widget should be wrapped in a [SelectionArea] for full
   /// selection support with handles and context menu.
   final bool selectionEnabled;
@@ -75,13 +77,13 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
   final Duration cursorBlinkDuration;
 
   /// ScrollController for auto-scrolling to bottom.
-  /// 
+  ///
   /// If provided, the widget will automatically scroll to the bottom
   /// when new content is added during streaming.
   final ScrollController? scrollController;
 
   /// Whether to automatically scroll to bottom when new content arrives.
-  /// 
+  ///
   /// Defaults to true. Requires [scrollController] to be provided.
   final bool autoScrollToBottom;
 
@@ -99,7 +101,8 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
       cursorBlinkDuration: cursorBlinkDuration,
       scrollController: scrollController,
       autoScrollToBottom: autoScrollToBottom,
-      selectionRegistrar: selectionEnabled ? SelectionContainer.maybeOf(context) : null,
+      selectionRegistrar:
+          selectionEnabled ? SelectionContainer.maybeOf(context) : null,
       selectionEnabled: selectionEnabled,
     );
   }
@@ -121,7 +124,8 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
       ..cursorBlinkDuration = cursorBlinkDuration
       ..scrollController = scrollController
       ..autoScrollToBottom = autoScrollToBottom
-      ..selectionRegistrar = selectionEnabled ? SelectionContainer.maybeOf(context) : null
+      ..selectionRegistrar =
+          selectionEnabled ? SelectionContainer.maybeOf(context) : null
       ..selectionEnabled = selectionEnabled;
   }
 }
@@ -212,7 +216,8 @@ class RenderStreamMarkdown extends RenderBox {
 
   void _updateChildSelectionRegistrar(RenderMarkdownBlock child) {
     if (child is SelectableTextMixin) {
-      (child as SelectableTextMixin).registrar = _selectionEnabled ? _selectionRegistrar : null;
+      (child as SelectableTextMixin).registrar =
+          _selectionEnabled ? _selectionRegistrar : null;
     }
   }
 
@@ -348,7 +353,7 @@ class RenderStreamMarkdown extends RenderBox {
     if (markdown == _currentMarkdown) return;
 
     _pendingMarkdown = markdown;
-    
+
     // Throttle updates to once per frame
     if (!_updateScheduled) {
       _updateScheduled = true;
@@ -428,7 +433,7 @@ class RenderStreamMarkdown extends RenderBox {
   void _scrollToBottom() {
     final controller = _scrollController;
     if (controller == null || !controller.hasClients) return;
-    
+
     final maxScroll = controller.position.maxScrollExtent;
     if (controller.offset < maxScroll) {
       controller.animateTo(
@@ -448,13 +453,13 @@ class RenderStreamMarkdown extends RenderBox {
     _isStreaming = false;
     _cursorTimer?.cancel();
     _cursorTimer = null;
-    
+
     if (_currentBlocks.isNotEmpty && _currentBlocks.last.isPartial) {
       final lastBlock = _currentBlocks.removeLast();
       _currentBlocks.add(lastBlock.copyWith(isPartial: false));
       _updateChildren();
     }
-    
+
     markNeedsPaint();
   }
 
@@ -524,13 +529,14 @@ class RenderStreamMarkdown extends RenderBox {
     // Draw blinking cursor if streaming
     if (_showCursor && _isStreaming && _cursorVisible && _children.isNotEmpty) {
       final canvas = context.canvas;
-      final color = _cursorColor ?? _theme.textStyle?.color ?? const Color(0xFF000000);
+      final color =
+          _cursorColor ?? _theme.textStyle?.color ?? const Color(0xFF000000);
       final height = _cursorHeight ?? (_theme.textStyle?.fontSize ?? 16) * 1.2;
-      
+
       // Position cursor at the end of last block
       final cursorX = offset.dx + 4; // Small offset from left
       final cursorY = lastChildBottom - height - 4;
-      
+
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromLTWH(cursorX, cursorY, _cursorWidth, height),
@@ -552,10 +558,10 @@ class RenderStreamMarkdown extends RenderBox {
 
     for (var i = 0; i < _children.length; i++) {
       final child = _children[i];
-      
+
       // Skip children that haven't been laid out yet
       if (!child.hasSize) continue;
-      
+
       final childOffset = Offset(0, currentY);
       final childRect = childOffset & child.size;
 
