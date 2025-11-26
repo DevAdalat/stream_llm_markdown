@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:math' hide log;
 
 import 'package:flutter/material.dart';
 import 'package:stream_markdown_renderer/stream_markdown_renderer.dart';
@@ -77,9 +78,9 @@ class _DemoPageState extends State<DemoPage> {
                     ? StreamMarkdownRenderer(
                         markdownStream: _controller!.stream,
                         showCursor: false,
-                        // characterDelay: const Duration(
-                        //   milliseconds: 15,
-                        // ), // Character-by-character animation
+                        characterDelay: const Duration(
+                          milliseconds: 10,
+                        ), // Character-by-character animation
                         scrollController: _scrollController,
                         autoScrollToBottom: true,
                         theme: widget.isDarkMode
@@ -167,7 +168,7 @@ def fibonacci(n):
     while len(sequence) < n:
         sequence.append(sequence[-1] + sequence[-2])
     return sequence
-
+    
 # Print first 10 Fibonacci numbers
 print(fibonacci(10))
 ```
@@ -256,28 +257,47 @@ Perfect for AI chat applications! 🚀
 ''';
 
     var buffer = '';
+    final random = Random();
 
     // Simulate streaming with realistic chunk sizes and delays
     // Split into words and whitespace to simulate token-based streaming
     final RegExp tokenRegex = RegExp(r'[^\s]+|\s+');
     final matches = tokenRegex.allMatches(markdown);
 
+    var currentChunkWords = 0;
+    var targetChunkWords = 5 + random.nextInt(3); // 5, 6, or 7
+    var pendingChunk = '';
+
     for (final match in matches) {
       if (controller.isClosed) break;
 
       final token = match.group(0)!;
-      buffer += token;
+      pendingChunk += token;
+
+      // Count words (non-whitespace tokens)
+      if (token.trim().isNotEmpty) {
+        currentChunkWords++;
+      }
+
+      // If we reached the target chunk size, emit
+      if (currentChunkWords >= targetChunkWords) {
+        buffer += pendingChunk;
+        controller.add(buffer);
+
+        // Reset for next chunk
+        pendingChunk = '';
+        currentChunkWords = 0;
+        targetChunkWords = 5 + random.nextInt(3);
+
+        // Delay between chunks
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+    }
+
+    // Emit any remaining text
+    if (pendingChunk.isNotEmpty && !controller.isClosed) {
+      buffer += pendingChunk;
       controller.add(buffer);
-
-      // Variable delay to simulate realistic streaming
-      final isNewline = token.contains('\n');
-      final isSpace = token.trim().isEmpty;
-
-      final delay = isNewline ? 50 : (isSpace ? 10 : 30);
-      await Future<void>.delayed(Duration(milliseconds: delay));
-
-      // Scroll to bottom after rendering
-      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     }
 
     if (!controller.isClosed) {
@@ -295,16 +315,6 @@ Perfect for AI chat applications! 🚀
     });
 
     _simulateAiStream(_controller!);
-  }
-
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 100),
-        curve: Curves.easeOut,
-      );
-    }
   }
 }
 

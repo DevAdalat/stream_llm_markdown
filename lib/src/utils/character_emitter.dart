@@ -71,9 +71,10 @@ class CharacterEmitter {
         // Subscribe to the source stream
         subscription = source.listen(
           (chunk) {
-            // Calculate new characters (difference between latest and emitted)
-            if (chunk.length > emittedText.length) {
-              final newCharacters = chunk.substring(emittedText.length);
+            // Calculate new characters (difference between latest and buffered)
+            final currentLength = emittedText.length + characterBuffer.length;
+            if (chunk.length > currentLength) {
+              final newCharacters = chunk.substring(currentLength);
 
               // Add new characters to buffer
               for (int i = 0; i < newCharacters.length; i++) {

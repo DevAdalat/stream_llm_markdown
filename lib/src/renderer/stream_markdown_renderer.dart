@@ -10,7 +10,7 @@ import '../parsing/markdown_block.dart';
 import '../render_objects/base/render_markdown_block.dart';
 import '../render_objects/mixins/selectable_text_mixin.dart';
 import '../theme/markdown_theme.dart';
-import '../utils/character_emitter.dart';
+
 import 'block_registry.dart';
 
 /// A widget that renders streaming Markdown content using custom RenderObjects.
@@ -101,16 +101,9 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
 
   @override
   RenderObject createRenderObject(BuildContext context) {
-    // Apply character-by-character emission if delay is specified
-    final effectiveStream = characterDelay != null && characterDelay != Duration.zero
-        ? CharacterEmitter.emit(
-            source: markdownStream,
-            characterDelay: characterDelay!,
-          )
-        : markdownStream;
-
     return RenderStreamMarkdown(
-      markdownStream: effectiveStream,
+      markdownStream: markdownStream,
+      characterDelay: characterDelay,
       theme: (theme ?? MarkdownTheme.light()).withDefaults(),
       onLinkTapped: onLinkTapped,
       onCheckboxTapped: onCheckboxTapped,
@@ -132,16 +125,9 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
     BuildContext context,
     RenderStreamMarkdown renderObject,
   ) {
-    // Apply character-by-character emission if delay is specified
-    final effectiveStream = characterDelay != null && characterDelay != Duration.zero
-        ? CharacterEmitter.emit(
-            source: markdownStream,
-            characterDelay: characterDelay!,
-          )
-        : markdownStream;
-
     renderObject
-      ..markdownStream = effectiveStream
+      ..markdownStream = markdownStream
+      ..characterDelay = characterDelay
       ..theme = (theme ?? MarkdownTheme.light()).withDefaults()
       ..onLinkTapped = onLinkTapped
       ..onCheckboxTapped = onCheckboxTapped
@@ -175,6 +161,7 @@ class RenderStreamMarkdown extends RenderBox {
     bool autoScrollToBottom = true,
     SelectionRegistrar? selectionRegistrar,
     bool selectionEnabled = true,
+    Duration? characterDelay,
   })  : _theme = theme,
         _onLinkTapped = onLinkTapped,
         _onCheckboxTapped = onCheckboxTapped,
@@ -186,7 +173,8 @@ class RenderStreamMarkdown extends RenderBox {
         _scrollController = scrollController,
         _autoScrollToBottom = autoScrollToBottom,
         _selectionRegistrar = selectionRegistrar,
-        _selectionEnabled = selectionEnabled {
+        _selectionEnabled = selectionEnabled,
+        _characterDelay = characterDelay {
     _subscribeToStream(markdownStream);
   }
 
@@ -200,7 +188,33 @@ class RenderStreamMarkdown extends RenderBox {
   bool _cursorVisible = true;
   Timer? _cursorTimer;
 
-  // Child render objects
+  // Character emission state
+  String _accumulatedSourceText = '';
+  String _emittedText = '';
+  final List<String> _characterBuffer = [];
+  Timer? _emitTimer;
+
+  /// Delay between character emissions.
+  Duration? get characterDelay => _characterDelay;
+  Duration? _characterDelay;
+  set characterDelay(Duration? value) {
+    if (_characterDelay == value) return;
+    _characterDelay = value;
+
+    // If delay changes, we might need to adjust the timer
+    _emitTimer?.cancel();
+    if (_characterBuffer.isNotEmpty) {
+      if (value != null && value != Duration.zero) {
+        _startEmitTimer();
+      } else {
+        // Flush buffer if delay is removed
+        _emittedText += _characterBuffer.join();
+        _characterBuffer.clear();
+        _scheduleUpdate(_emittedText);
+      }
+    }
+  }
+
   final List<RenderMarkdownBlock> _children = [];
   final Map<String, RenderMarkdownBlock> _childMap = {};
 
@@ -355,6 +369,11 @@ class RenderStreamMarkdown extends RenderBox {
     _isStreaming = true;
     _cursorVisible = true;
 
+    _accumulatedSourceText = '';
+    _emittedText = '';
+    _characterBuffer.clear();
+    _emitTimer?.cancel();
+
     // Clear existing children
     _clearChildren();
 
@@ -377,9 +396,48 @@ class RenderStreamMarkdown extends RenderBox {
     _childMap.clear();
   }
 
-  void _onMarkdownReceived(String markdown) {
-    if (markdown == _currentMarkdown) return;
+  void _onMarkdownReceived(String rawMarkdown) {
+    if (rawMarkdown == _accumulatedSourceText) return;
 
+    // Handle reset or non-incremental updates
+    if (rawMarkdown.length < _accumulatedSourceText.length) {
+      _accumulatedSourceText = rawMarkdown;
+      _emittedText = rawMarkdown;
+      _characterBuffer.clear();
+      _emitTimer?.cancel();
+      _scheduleUpdate(_emittedText);
+      return;
+    }
+
+    final newText = rawMarkdown.substring(_accumulatedSourceText.length);
+    _accumulatedSourceText = rawMarkdown;
+
+    if (_characterDelay != null && _characterDelay != Duration.zero) {
+      for (var char in newText.split('')) {
+        _characterBuffer.add(char);
+      }
+      _startEmitTimer();
+    } else {
+      _emittedText = rawMarkdown;
+      _characterBuffer.clear();
+      _emitTimer?.cancel();
+      _scheduleUpdate(_emittedText);
+    }
+  }
+
+  void _startEmitTimer() {
+    if (_emitTimer?.isActive ?? false) return;
+    _emitTimer = Timer.periodic(_characterDelay!, (timer) {
+      if (_characterBuffer.isEmpty) {
+        timer.cancel();
+        return;
+      }
+      _emittedText += _characterBuffer.removeAt(0);
+      _scheduleUpdate(_emittedText);
+    });
+  }
+
+  void _scheduleUpdate(String markdown) {
     _pendingMarkdown = markdown;
 
     // Throttle updates to once per frame
@@ -387,6 +445,7 @@ class RenderStreamMarkdown extends RenderBox {
       _updateScheduled = true;
       SchedulerBinding.instance.addPostFrameCallback((_) {
         _updateScheduled = false;
+        if (!attached) return;
         if (_pendingMarkdown != _currentMarkdown) {
           _currentMarkdown = _pendingMarkdown;
           _currentBlocks = _parser.parse(_currentMarkdown);
@@ -452,9 +511,16 @@ class RenderStreamMarkdown extends RenderBox {
 
     // Auto-scroll to bottom after layout
     if (_autoScrollToBottom && _scrollController != null && _isStreaming) {
-      SchedulerBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom();
-      });
+      if (_scrollController!.hasClients) {
+        final pos = _scrollController!.position;
+        // Only auto-scroll if we are already near the bottom (within 50px)
+        // or if the content is smaller than the viewport (can't scroll yet)
+        if (pos.maxScrollExtent - pos.pixels < 50 || pos.maxScrollExtent == 0) {
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            _scrollToBottom();
+          });
+        }
+      }
     }
   }
 
@@ -564,10 +630,10 @@ class RenderStreamMarkdown extends RenderBox {
       // Get the last child and calculate cursor position
       final lastChild = _children.last;
       final lastChildY = lastChildBottom - lastChild.size.height;
-      
+
       // Get the cursor offset from the last child
       final cursorOffset = lastChild.getCursorOffset();
-      
+
       if (cursorOffset != null) {
         // Position cursor at the end of last block's text
         final cursorX = offset.dx + cursorOffset.dx;
@@ -652,10 +718,10 @@ class RenderStreamMarkdown extends RenderBox {
 
   @override
   void detach() {
+    super.detach();
     for (final child in _children) {
       child.detach();
     }
-    super.detach();
   }
 
   @override
