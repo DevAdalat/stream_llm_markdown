@@ -28,8 +28,13 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock
   Rect? _copyButtonRect;
   Offset _textOffset = Offset.zero;
 
+  bool _isDisposed = false;
+
   @override
-  TextPainter? get selectableTextPainter => _codePainter;
+  TextPainter? get selectableTextPainter {
+    if (_isDisposed) return null;
+    return _codePainter;
+  }
 
   @override
   Offset get textPaintOffset => _textOffset;
@@ -40,15 +45,26 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock
 
   @override
   void invalidateCache() {
-    _codePainter?.dispose();
+    // Don't dispose painters here as they might still be referenced
+    // by the selection system during updates. Let GC handle it.
     _codePainter = null;
-    _labelPainter?.dispose();
     _labelPainter = null;
     super.invalidateCache();
   }
 
   TextPainter _getCodePainter(double maxWidth) {
-    if (_codePainter != null) return _codePainter!;
+    if (_isDisposed) {
+      // Should not happen, but return a dummy painter if it does
+      return TextPainter(textDirection: TextDirection.ltr)..layout();
+    }
+
+    final padding = _codeTheme.padding ?? const EdgeInsets.all(16);
+    final contentWidth = maxWidth - padding.horizontal;
+
+    if (_codePainter != null) {
+      _codePainter!.layout(maxWidth: contentWidth);
+      return _codePainter!;
+    }
 
     final codeStyle = _codeTheme.textStyle ??
         const TextStyle(
@@ -57,8 +73,16 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock
         );
 
     final syntaxTheme = _codeTheme.syntaxTheme ?? SyntaxTheme.light();
+    var content = block.content;
+    if (content.isNotEmpty) {
+      final lastCodeUnit = content.codeUnitAt(content.length - 1);
+      if (lastCodeUnit >= 0xD800 && lastCodeUnit <= 0xDBFF) {
+        content = content.substring(0, content.length - 1);
+      }
+    }
+
     final spans = _highlighter.highlight(
-      block.content,
+      content,
       _language,
       syntaxTheme,
       codeStyle,
@@ -67,13 +91,20 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock
     _codePainter = TextPainter(
       text: TextSpan(children: spans),
       textDirection: TextDirection.ltr,
-    )..layout(maxWidth: maxWidth - (_codeTheme.padding?.horizontal ?? 32));
+    )..layout(maxWidth: contentWidth);
 
     return _codePainter!;
   }
 
   TextPainter _getLabelPainter() {
-    if (_labelPainter != null) return _labelPainter!;
+    if (_isDisposed) {
+      return TextPainter(textDirection: TextDirection.ltr)..layout();
+    }
+
+    if (_labelPainter != null) {
+      _labelPainter!.layout();
+      return _labelPainter!;
+    }
 
     if (_language.isEmpty) {
       _labelPainter = TextPainter(
@@ -99,6 +130,7 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock
 
   @override
   double computeIntrinsicHeight(double width) {
+    if (_isDisposed) return 0;
     final padding = _codeTheme.padding ?? const EdgeInsets.all(16);
     final codePainter = _getCodePainter(width);
     final labelPainter = _getLabelPainter();
@@ -113,10 +145,9 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock
 
   @override
   void performLayout() {
-    _codePainter?.dispose();
-    _codePainter = null;
-    _labelPainter?.dispose();
-    _labelPainter = null;
+    if (_isDisposed) return;
+    // Don't dispose painters here, reuse them with new constraints
+    // via computeIntrinsicHeight -> _getCodePainter
 
     final height = computeIntrinsicHeight(constraints.maxWidth);
     size = Size(constraints.maxWidth, height);
@@ -145,7 +176,8 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    final canvas = context.canvas;
+    if (_isDisposed) return;
+    var canvas = context.canvas;
     final padding = _codeTheme.padding ?? const EdgeInsets.all(16);
     final borderRadius = _codeTheme.borderRadius ?? 8.0;
     final backgroundColor =
@@ -160,7 +192,9 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock
     );
 
     // Paint selection highlight
+    // This might push layers, so we must re-acquire the canvas afterwards
     paintSelection(context, offset);
+    canvas = context.canvas;
 
     var contentOffset = offset + Offset(padding.left, padding.top);
 
@@ -179,6 +213,11 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock
 
   @override
   void dispose() {
+    _isDisposed = true;
+    _codePainter?.dispose();
+    _codePainter = null;
+    _labelPainter?.dispose();
+    _labelPainter = null;
     disposeSelectable();
     super.dispose();
   }
@@ -286,11 +325,11 @@ class RenderMarkdownCodeBlock extends RenderMarkdownBlock
   @override
   Offset? getCursorOffset() {
     if (_codePainter == null) return null;
-    
+
     // Get the position at the end of the code text
     final endPosition = TextPosition(offset: _codePainter!.plainText.length);
     final endOffset = _codePainter!.getOffsetForCaret(endPosition, Rect.zero);
-    
+
     // Add the text offset (padding + label)
     return endOffset + _textOffset;
   }

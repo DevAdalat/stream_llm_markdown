@@ -1,12 +1,14 @@
+import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 
 import '../parsing/markdown_block.dart';
 import '../text/inline_span_builder.dart';
 import '../theme/markdown_theme.dart';
 import 'base/render_markdown_block.dart';
+import 'mixins/selectable_text_mixin.dart';
 
 /// Renders an ordered or unordered list.
-class RenderMarkdownList extends RenderMarkdownBlock {
+class RenderMarkdownList extends RenderMarkdownBlock with SelectableTextMixin {
   /// Creates a new render list.
   RenderMarkdownList({
     required super.block,
@@ -20,6 +22,10 @@ class RenderMarkdownList extends RenderMarkdownBlock {
   final List<Rect> _checkboxRects = [];
   final List<_NestedListInfo> _nestedLists = [];
 
+  // Selection support
+  final List<_SelectableItem> _selectableItems = [];
+  String _cachedPlainText = '';
+
   ListTheme get _listTheme => theme.listTheme ?? const ListTheme();
 
   bool get _isOrdered => block.type == MarkdownBlockType.orderedList;
@@ -32,6 +38,9 @@ class RenderMarkdownList extends RenderMarkdownBlock {
   int get _start => (block.metadata['start'] as int?) ?? 1;
 
   @override
+  TextPainter? get selectableTextPainter => null;
+
+  @override
   void invalidateCache() {
     for (final painter in _itemPainters) {
       painter.dispose();
@@ -39,6 +48,8 @@ class RenderMarkdownList extends RenderMarkdownBlock {
     _itemPainters.clear();
     _checkboxRects.clear();
     _disposeNestedLists();
+    _selectableItems.clear();
+    _cachedPlainText = '';
     super.invalidateCache();
   }
 
@@ -60,7 +71,14 @@ class RenderMarkdownList extends RenderMarkdownBlock {
 
     for (var i = 0; i < _items.length; i++) {
       final item = _items[i];
-      final content = item['content'] as String? ?? '';
+      var content = item['content'] as String? ?? '';
+      if (content.isNotEmpty) {
+        final lastCodeUnit = content.codeUnitAt(content.length - 1);
+        if (lastCodeUnit >= 0xD800 && lastCodeUnit <= 0xDBFF) {
+          content = content.substring(0, content.length - 1);
+        }
+      }
+
       final span = _spanBuilder.build(
         content,
         baseStyle,
@@ -83,7 +101,16 @@ class RenderMarkdownList extends RenderMarkdownBlock {
         final nestedAvailableWidth = availableWidth - indentWidth;
 
         for (final nestedItem in nestedItems) {
-          final nestedContent = nestedItem['content'] as String? ?? '';
+          var nestedContent = nestedItem['content'] as String? ?? '';
+          if (nestedContent.isNotEmpty) {
+            final lastCodeUnit =
+                nestedContent.codeUnitAt(nestedContent.length - 1);
+            if (lastCodeUnit >= 0xD800 && lastCodeUnit <= 0xDBFF) {
+              nestedContent =
+                  nestedContent.substring(0, nestedContent.length - 1);
+            }
+          }
+
           final nestedSpan = _spanBuilder.build(
             nestedContent,
             baseStyle,
@@ -114,6 +141,74 @@ class RenderMarkdownList extends RenderMarkdownBlock {
           ),
         );
       }
+    }
+  }
+
+  void _updateSelectableItems(double maxWidth) {
+    _selectableItems.clear();
+    _cachedPlainText = '';
+
+    final indentWidth = _listTheme.indentWidth ?? 24;
+    final itemSpacing = _listTheme.itemSpacing ?? 4;
+
+    var currentY = 0.0;
+    var currentTextOffset = 0;
+
+    for (var i = 0; i < _itemPainters.length; i++) {
+      final painter = _itemPainters[i];
+      final offset = Offset(indentWidth, currentY);
+
+      final text = painter.plainText;
+      // Add newline only if not the last item or if there are nested items
+      final suffix = '\n';
+
+      _selectableItems.add(_SelectableItem(
+        painter: painter,
+        offset: offset,
+        startTextOffset: currentTextOffset,
+        endTextOffset: currentTextOffset + text.length,
+      ));
+
+      _cachedPlainText += text + suffix;
+      currentTextOffset += text.length + suffix.length;
+
+      currentY += painter.height;
+
+      // Nested lists
+      final nestedList =
+          _nestedLists.where((n) => n.itemIndex == i).firstOrNull;
+      if (nestedList != null) {
+        final nestedIndentWidth = indentWidth * 2;
+
+        for (var j = 0; j < nestedList.painters.length; j++) {
+          currentY += itemSpacing;
+          final nestedPainter = nestedList.painters[j];
+          final nestedOffset = Offset(nestedIndentWidth, currentY);
+
+          final nestedText = nestedPainter.plainText;
+          final nestedSuffix = '\n';
+
+          _selectableItems.add(_SelectableItem(
+            painter: nestedPainter,
+            offset: nestedOffset,
+            startTextOffset: currentTextOffset,
+            endTextOffset: currentTextOffset + nestedText.length,
+          ));
+
+          _cachedPlainText += nestedText + nestedSuffix;
+          currentTextOffset += nestedText.length + nestedSuffix.length;
+
+          currentY += nestedPainter.height;
+        }
+      }
+
+      currentY += itemSpacing;
+    }
+
+    // Remove last newline if exists
+    if (_cachedPlainText.isNotEmpty && _cachedPlainText.endsWith('\n')) {
+      _cachedPlainText =
+          _cachedPlainText.substring(0, _cachedPlainText.length - 1);
     }
   }
 
@@ -156,17 +251,25 @@ class RenderMarkdownList extends RenderMarkdownBlock {
 
     final height = computeIntrinsicHeight(constraints.maxWidth);
     size = Size(constraints.maxWidth, height);
+
+    // Build selectable items after layout
+    _updateSelectableItems(constraints.maxWidth);
+    initSelectableIfNeeded();
   }
 
   @override
   void paint(PaintingContext context, Offset offset) {
-    final canvas = context.canvas;
     final indentWidth = _listTheme.indentWidth ?? 24;
     final itemSpacing = _listTheme.itemSpacing ?? 4;
     final bulletColor = _listTheme.bulletColor ?? const Color(0xFF6B7280);
 
     _buildItemPainters(constraints.maxWidth);
     _checkboxRects.clear();
+
+    // Paint selection highlight
+    paintSelection(context, offset);
+    // Re-acquire canvas as paintSelection might have pushed layers
+    final activeCanvas = context.canvas;
 
     var currentY = offset.dy;
 
@@ -192,7 +295,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
             : (_listTheme.checkboxUncheckedColor ?? const Color(0xFF6B7280));
 
         // Draw checkbox
-        canvas.drawRRect(
+        activeCanvas.drawRRect(
           RRect.fromRectAndRadius(checkboxRect, const Radius.circular(3)),
           Paint()
             ..color = checkboxColor
@@ -207,7 +310,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
             ..lineTo(checkboxX + 6, bulletY + 3)
             ..lineTo(checkboxX + 12, bulletY - 4);
 
-          canvas.drawPath(
+          activeCanvas.drawPath(
             path,
             Paint()
               ..color = const Color(0xFFFFFFFF)
@@ -232,7 +335,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
         )..layout();
 
         numberPainter.paint(
-          canvas,
+          activeCanvas,
           Offset(
             offset.dx + indentWidth - numberPainter.width - 8,
             bulletY - numberPainter.height / 2,
@@ -241,7 +344,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
         numberPainter.dispose();
       } else {
         // Unordered list - draw bullet
-        canvas.drawCircle(
+        activeCanvas.drawCircle(
           Offset(offset.dx + indentWidth / 2, bulletY),
           3,
           Paint()..color = bulletColor,
@@ -249,7 +352,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
       }
 
       // Draw item text
-      painter.paint(canvas, Offset(offset.dx + indentWidth, currentY));
+      painter.paint(activeCanvas, Offset(offset.dx + indentWidth, currentY));
 
       currentY += painter.height;
 
@@ -283,7 +386,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
                 : (_listTheme.checkboxUncheckedColor ??
                     const Color(0xFF6B7280));
 
-            canvas.drawRRect(
+            activeCanvas.drawRRect(
               RRect.fromRectAndRadius(checkboxRect, const Radius.circular(3)),
               Paint()
                 ..color = checkboxColor
@@ -298,7 +401,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
                 ..lineTo(checkboxX + 6, nestedBulletY + 3)
                 ..lineTo(checkboxX + 12, nestedBulletY - 4);
 
-              canvas.drawPath(
+              activeCanvas.drawPath(
                 path,
                 Paint()
                   ..color = const Color(0xFFFFFFFF)
@@ -323,7 +426,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
             )..layout();
 
             numberPainter.paint(
-              canvas,
+              activeCanvas,
               Offset(
                 offset.dx + nestedIndentWidth - numberPainter.width - 8,
                 nestedBulletY - numberPainter.height / 2,
@@ -332,7 +435,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
             numberPainter.dispose();
           } else {
             // Nested unordered list - draw smaller bullet
-            canvas.drawCircle(
+            activeCanvas.drawCircle(
               Offset(
                 offset.dx + nestedIndentWidth - indentWidth / 2,
                 nestedBulletY,
@@ -344,7 +447,7 @@ class RenderMarkdownList extends RenderMarkdownBlock {
 
           // Draw nested item text
           nestedPainter.paint(
-            canvas,
+            activeCanvas,
             Offset(offset.dx + nestedIndentWidth, currentY),
           );
           currentY += nestedPainter.height;
@@ -380,28 +483,168 @@ class RenderMarkdownList extends RenderMarkdownBlock {
   @override
   Offset? getCursorOffset() {
     if (_itemPainters.isEmpty) return null;
-    
+
     // Get the last item painter
     final lastPainter = _itemPainters.last;
-    
+
     // Get the position at the end of the last item's text
     final endPosition = TextPosition(offset: lastPainter.plainText.length);
     final endOffset = lastPainter.getOffsetForCaret(endPosition, Rect.zero);
-    
+
     // Calculate Y position - sum of all previous items
     var yOffset = 0.0;
     final itemSpacing = _listTheme.itemSpacing ?? 8;
     for (var i = 0; i < _itemPainters.length - 1; i++) {
       yOffset += _itemPainters[i].height + itemSpacing;
     }
-    
+
     // Add left indent and bullet/number width
     final leftIndent = _listTheme.indentWidth ?? 16.0;
     final bulletWidth = _listTheme.bulletSize ?? 6.0;
     final xOffset = leftIndent + bulletWidth + 8 + endOffset.dx;
-    
+
     return Offset(xOffset, yOffset + endOffset.dy);
   }
+
+  // --- SelectableTextMixin Overrides ---
+
+  @override
+  String get plainText => _cachedPlainText;
+
+  @override
+  List<TextBox> getBoxesForSelection(TextSelection selection) {
+    final boxes = <TextBox>[];
+
+    for (final item in _selectableItems) {
+      // Check if this item overlaps with selection
+      // Item range: [item.startTextOffset, item.endTextOffset]
+      // Selection range: [selection.start, selection.end]
+
+      final itemStart = item.startTextOffset;
+      final itemEnd = item.endTextOffset;
+
+      if (selection.start < itemEnd && selection.end > itemStart) {
+        // Calculate intersection
+        final localStart = (selection.start - itemStart)
+            .clamp(0, item.painter.plainText.length);
+        final localEnd =
+            (selection.end - itemStart).clamp(0, item.painter.plainText.length);
+
+        if (localStart < localEnd) {
+          final itemBoxes = item.painter.getBoxesForSelection(
+            TextSelection(baseOffset: localStart, extentOffset: localEnd),
+          );
+
+          // Shift boxes by item offset
+          for (final box in itemBoxes) {
+            boxes.add(TextBox.fromLTRBD(
+              box.left + item.offset.dx,
+              box.top + item.offset.dy,
+              box.right + item.offset.dx,
+              box.bottom + item.offset.dy,
+              box.direction,
+            ));
+          }
+        }
+      }
+    }
+
+    return boxes;
+  }
+
+  @override
+  TextPosition getPositionForOffset(Offset offset) {
+    // Find which item contains the offset (vertically)
+    for (final item in _selectableItems) {
+      final itemRect = item.offset & item.painter.size;
+      // We check vertical bounds loosely to capture clicks between items
+      if (offset.dy >= itemRect.top && offset.dy < itemRect.bottom + 4) {
+        // +4 for spacing
+        // Map to local coordinates
+        final localOffset = offset - item.offset;
+        final localPosition = item.painter.getPositionForOffset(localOffset);
+        return TextPosition(
+            offset: item.startTextOffset + localPosition.offset);
+      }
+    }
+
+    // If above first item
+    if (_selectableItems.isNotEmpty &&
+        offset.dy < _selectableItems.first.offset.dy) {
+      return const TextPosition(offset: 0);
+    }
+
+    // If below last item
+    if (_selectableItems.isNotEmpty &&
+        offset.dy >= _selectableItems.last.offset.dy) {
+      return TextPosition(offset: _cachedPlainText.length);
+    }
+
+    return const TextPosition(offset: 0);
+  }
+
+  @override
+  TextRange getWordBoundary(TextPosition position) {
+    for (final item in _selectableItems) {
+      if (position.offset >= item.startTextOffset &&
+          position.offset <= item.endTextOffset) {
+        final localOffset = position.offset - item.startTextOffset;
+        final range =
+            item.painter.getWordBoundary(TextPosition(offset: localOffset));
+        return TextRange(
+          start: item.startTextOffset + range.start,
+          end: item.startTextOffset + range.end,
+        );
+      }
+    }
+    return TextRange.empty;
+  }
+
+  @override
+  Offset getOffsetForCaret(TextPosition position, Rect caretPrototype) {
+    for (final item in _selectableItems) {
+      if (position.offset >= item.startTextOffset &&
+          position.offset <= item.endTextOffset) {
+        final localOffset = position.offset - item.startTextOffset;
+        // Clamp localOffset to painter length
+        final clampedLocalOffset =
+            localOffset.clamp(0, item.painter.plainText.length);
+
+        final offset = item.painter.getOffsetForCaret(
+            TextPosition(offset: clampedLocalOffset), caretPrototype);
+        return offset + item.offset;
+      }
+    }
+    return Offset.zero;
+  }
+
+  @override
+  double get preferredLineHeight {
+    if (_itemPainters.isNotEmpty) {
+      return _itemPainters.first.preferredLineHeight;
+    }
+    return 14.0;
+  }
+
+  @override
+  List<ui.LineMetrics> computeLineMetrics() {
+    // Return empty for now as it's complex to aggregate and mostly used for keyboard nav
+    return [];
+  }
+}
+
+class _SelectableItem {
+  _SelectableItem({
+    required this.painter,
+    required this.offset,
+    required this.startTextOffset,
+    required this.endTextOffset,
+  });
+
+  final TextPainter painter;
+  final Offset offset;
+  final int startTextOffset;
+  final int endTextOffset;
 }
 
 /// Information about a nested list for rendering.

@@ -29,7 +29,8 @@ class RenderMarkdownHeader extends RenderMarkdownBlock
 
   @override
   void invalidateCache() {
-    _textPainter?.dispose();
+    // Don't dispose painter here as it might still be referenced
+    // by the selection system during updates. Let GC handle it.
     _textPainter = null;
     super.invalidateCache();
   }
@@ -40,8 +41,16 @@ class RenderMarkdownHeader extends RenderMarkdownBlock
     final headerTheme = theme.headerTheme ?? const HeaderTheme();
     final baseStyle = headerTheme.getStyleForLevel(_level);
 
+    var content = block.content;
+    if (content.isNotEmpty) {
+      final lastCodeUnit = content.codeUnitAt(content.length - 1);
+      if (lastCodeUnit >= 0xD800 && lastCodeUnit <= 0xDBFF) {
+        content = content.substring(0, content.length - 1);
+      }
+    }
+
     final span = _spanBuilder.build(
-      block.content,
+      content,
       baseStyle,
       theme,
       onLinkTapped: onLinkTapped,
@@ -75,11 +84,14 @@ class RenderMarkdownHeader extends RenderMarkdownBlock
 
   @override
   void paint(PaintingContext context, Offset offset) {
+    var canvas = context.canvas;
+
     // Paint selection highlight first
     paintSelection(context, offset);
+    canvas = context.canvas;
 
     final painter = _getTextPainter(constraints.maxWidth);
-    painter.paint(context.canvas, offset);
+    painter.paint(canvas, offset);
   }
 
   @override
@@ -91,11 +103,11 @@ class RenderMarkdownHeader extends RenderMarkdownBlock
   @override
   Offset? getCursorOffset() {
     if (_textPainter == null) return null;
-    
+
     // Get the position at the end of the text
     final endPosition = TextPosition(offset: _textPainter!.plainText.length);
     final endOffset = _textPainter!.getOffsetForCaret(endPosition, Rect.zero);
-    
+
     return endOffset;
   }
 }
