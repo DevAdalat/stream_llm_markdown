@@ -78,6 +78,7 @@ class _DemoPageState extends State<DemoPage> {
                     ? StreamMarkdownRenderer(
                         markdownStream: _controller!.stream,
                         showCursor: false,
+                        selectionEnabled: true,
                         characterDelay: const Duration(
                           milliseconds: 10,
                         ), // Character-by-character animation

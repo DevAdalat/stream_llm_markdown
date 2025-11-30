@@ -566,10 +566,17 @@ class RenderStreamMarkdown extends RenderBox {
   }
 
   @override
+  void setupParentData(RenderObject child) {
+    if (child.parentData is! BoxParentData) {
+      child.parentData = BoxParentData();
+    }
+  }
+
+  @override
   void performLayout() {
     final blockSpacing = _theme.blockSpacing ?? 16;
 
-    var totalHeight = 0.0;
+    var currentY = 0.0;
 
     for (var i = 0; i < _children.length; i++) {
       final child = _children[i];
@@ -583,41 +590,38 @@ class RenderStreamMarkdown extends RenderBox {
         parentUsesSize: true,
       );
 
-      totalHeight += child.size.height;
+      final childParentData = child.parentData as BoxParentData;
+      childParentData.offset = Offset(0, currentY);
+
+      currentY += child.size.height;
 
       if (i < _children.length - 1) {
-        totalHeight += blockSpacing;
+        currentY += blockSpacing;
       }
     }
 
     size = Size(
       constraints.maxWidth,
-      totalHeight > 0 ? totalHeight : 0,
+      currentY > 0 ? currentY : 0,
     );
   }
 
   @override
+  void applyPaintTransform(RenderObject child, Matrix4 transform) {
+    final childParentData = child.parentData as BoxParentData;
+    transform.translate(childParentData.offset.dx, childParentData.offset.dy);
+  }
+
+  @override
   void paint(PaintingContext context, Offset offset) {
-    final blockSpacing = _theme.blockSpacing ?? 16;
-
-    var currentY = offset.dy;
-    var lastChildBottom = offset.dy;
-
     for (var i = 0; i < _children.length; i++) {
       final child = _children[i];
 
       // Skip children that haven't been laid out yet
       if (!child.hasSize) continue;
 
-      // Paint the block
-      context.paintChild(child, Offset(offset.dx, currentY));
-
-      currentY += child.size.height;
-      lastChildBottom = currentY;
-
-      if (i < _children.length - 1) {
-        currentY += blockSpacing;
-      }
+      final childParentData = child.parentData as BoxParentData;
+      context.paintChild(child, childParentData.offset + offset);
     }
 
     // Draw blinking cursor if streaming
@@ -629,7 +633,8 @@ class RenderStreamMarkdown extends RenderBox {
 
       // Get the last child and calculate cursor position
       final lastChild = _children.last;
-      final lastChildY = lastChildBottom - lastChild.size.height;
+      final lastChildParentData = lastChild.parentData as BoxParentData;
+      final lastChildY = offset.dy + lastChildParentData.offset.dy;
 
       // Get the cursor offset from the last child
       final cursorOffset = lastChild.getCursorOffset();
@@ -667,34 +672,24 @@ class RenderStreamMarkdown extends RenderBox {
     // Safety check: don't hit test if we haven't been laid out yet
     if (!hasSize) return false;
 
-    final blockSpacing = _theme.blockSpacing ?? 16;
-
-    var currentY = 0.0;
-
-    for (var i = 0; i < _children.length; i++) {
+    for (var i = _children.length - 1; i >= 0; i--) {
       final child = _children[i];
 
       // Skip children that haven't been laid out yet
       if (!child.hasSize) continue;
 
-      final childOffset = Offset(0, currentY);
-      final childRect = childOffset & child.size;
+      final childParentData = child.parentData as BoxParentData;
+      final childOffset = childParentData.offset;
 
-      if (childRect.contains(position)) {
-        return result.addWithPaintOffset(
-          offset: childOffset,
-          position: position,
-          hitTest: (BoxHitTestResult result, Offset transformed) {
-            return child.hitTest(result, position: transformed);
-          },
-        );
-      }
+      final bool isHit = result.addWithPaintOffset(
+        offset: childOffset,
+        position: position,
+        hitTest: (BoxHitTestResult result, Offset transformed) {
+          return child.hitTest(result, position: transformed);
+        },
+      );
 
-      currentY += child.size.height;
-
-      if (i < _children.length - 1) {
-        currentY += blockSpacing;
-      }
+      if (isHit) return true;
     }
 
     return false;
