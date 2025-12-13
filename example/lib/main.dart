@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:math' hide log;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:stream_markdown_renderer/stream_markdown_renderer.dart';
 
 void main() {
@@ -60,12 +61,16 @@ class _DemoPageState extends State<DemoPage> {
                   label: Text(_isStreaming ? 'Streaming...' : 'Start Stream'),
                 ),
                 const SizedBox(width: 16),
-                if (_isStreaming)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isStreaming ? Colors.green : Colors.red,
+                    ),
                   ),
+                ),
               ],
             ),
           ),
@@ -79,6 +84,14 @@ class _DemoPageState extends State<DemoPage> {
                         markdownStream: _controller!.stream,
                         showCursor: false,
                         selectionEnabled: true,
+                        customPatterns: [
+                          MarkdownPattern(
+                            pattern: RegExp(r'^custom$'),
+                            createRenderObject: (block, theme) {
+                              return RenderCustomBox();
+                            },
+                          ),
+                        ],
                         characterDelay: const Duration(
                           milliseconds: 10,
                         ), // Character-by-character animation
@@ -132,6 +145,14 @@ This is a **high-performance** streaming Markdown renderer built with custom Ren
 
 ## Features
 
+### Custom Pattern Demo
+
+Here is a custom widget injected via pattern:
+
+\uEB1Ecustom\uEB1E
+
+This widget is rendered using a custom `RenderBox`!
+
 ### Text Formatting
 
 You can use **bold**, *italic*, ~~strikethrough~~, and `inline code`.
@@ -155,25 +176,6 @@ void main() {
 }
 ```
 
-And some Python:
-
-```python
-def fibonacci(n):
-    """Generate Fibonacci sequence."""
-    if n <= 0:
-        return []
-    elif n == 1:
-        return [0]
-    
-    sequence = [0, 1]
-    while len(sequence) < n:
-        sequence.append(sequence[-1] + sequence[-2])
-    return sequence
-    
-# Print first 10 Fibonacci numbers
-print(fibonacci(10))
-```
-
 ### Lists
 
 #### Unordered List
@@ -194,29 +196,11 @@ print(fibonacci(10))
 - [ ] Write documentation
 - [ ] Publish to pub.dev
 
-#### Nested Lists
-- Main item one
-  - Nested item A
-  - Nested item B
-  - Nested item C
-- Main item two
-  - Nested item D
-  - Nested item E
-- Main item three
-
 ### Blockquotes
 
 > This is a blockquote with some **important** information.
 > 
 > It can span multiple lines.
-
-> **Note:** Blockquotes now support nested content:
-> 
-> - Point one
-> - Point two
-> - Point three
-> 
-> You can include lists, code, and more!
 
 ### Tables
 
@@ -346,5 +330,46 @@ class _MyAppState extends State<MyApp> {
           ? ThemeMode.dark
           : ThemeMode.light;
     });
+  }
+}
+
+class RenderCustomBox extends RenderBox {
+  @override
+  void performLayout() {
+    size = const Size(300, 60);
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final paint = Paint()
+      ..color = Colors.indigo
+      ..style = PaintingStyle.fill;
+
+    final rect = offset & size;
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(12));
+
+    context.canvas.drawRRect(rrect, paint);
+
+    final textPainter = TextPainter(
+      text: const TextSpan(
+        text: '✨ Custom Widget Pattern ✨',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+
+    textPainter.layout();
+    textPainter.paint(
+      context.canvas,
+      offset +
+          Offset(
+            (size.width - textPainter.width) / 2,
+            (size.height - textPainter.height) / 2,
+          ),
+    );
   }
 }
