@@ -1,7 +1,9 @@
 import 'package:flutter/rendering.dart';
 
 import '../parsing/markdown_block.dart';
+import '../parsing/markdown_pattern.dart';
 import '../render_objects/base/render_markdown_block.dart';
+import '../render_objects/render_custom_block.dart';
 import '../render_objects/mixins/selectable_text_mixin.dart';
 import '../render_objects/render_blockquote.dart';
 import '../render_objects/render_code_block.dart';
@@ -22,8 +24,32 @@ class BlockRegistry {
     void Function(String url)? onLinkTapped,
     void Function(int index, bool checked)? onCheckboxTapped,
     SelectionRegistrar? selectionRegistrar,
+    List<MarkdownPattern>? customPatterns,
   }) {
     switch (block.type) {
+      case MarkdownBlockType.custom:
+        if (customPatterns != null) {
+          final index = block.metadata['patternIndex'] as int?;
+          if (index != null && index >= 0 && index < customPatterns.length) {
+            final renderBox =
+                customPatterns[index].createRenderObject(block, theme);
+            if (renderBox is RenderMarkdownBlock) {
+              return renderBox;
+            }
+            return RenderCustomMarkdownBlock(
+              child: renderBox,
+              block: block,
+              theme: theme,
+            );
+          }
+        }
+        return RenderMarkdownParagraph(
+          block: block,
+          theme: theme,
+          onLinkTapped: onLinkTapped,
+          onCheckboxTapped: onCheckboxTapped,
+          selectionRegistrar: selectionRegistrar,
+        );
       case MarkdownBlockType.paragraph:
         return RenderMarkdownParagraph(
           block: block,
@@ -104,7 +130,24 @@ class BlockRegistry {
     void Function(String url)? onLinkTapped,
     void Function(int index, bool checked)? onCheckboxTapped,
     SelectionRegistrar? selectionRegistrar,
+    List<MarkdownPattern>? customPatterns,
   }) {
+    // First allow the pattern to update its custom render object
+    if (block.type == MarkdownBlockType.custom && customPatterns != null) {
+      final index = block.metadata['patternIndex'] as int?;
+      if (index != null && index >= 0 && index < customPatterns.length) {
+        final pattern = customPatterns[index];
+        if (pattern.updateRenderObject != null) {
+          if (renderObject is RenderCustomMarkdownBlock &&
+              renderObject.child != null) {
+            pattern.updateRenderObject!(renderObject.child!, block, theme);
+          } else {
+            pattern.updateRenderObject!(renderObject, block, theme);
+          }
+        }
+      }
+    }
+
     renderObject
       ..block = block
       ..theme = theme

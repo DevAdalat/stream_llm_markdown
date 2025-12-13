@@ -1,12 +1,19 @@
 import 'dart:convert';
 
 import 'markdown_block.dart';
+import 'markdown_pattern.dart';
 
 /// A streaming-aware incremental Markdown parser.
 ///
 /// Parses Markdown text and emits a list of complete blocks plus
 /// one optional partial block for streaming content.
 class IncrementalMarkdownParser {
+  /// Creates a new incremental markdown parser.
+  IncrementalMarkdownParser({this.customPatterns = const []});
+
+  /// Custom patterns to recognize during parsing.
+  final List<MarkdownPattern> customPatterns;
+
   int _parseDepth = 0;
   static const int _maxParseDepth = 10;
 
@@ -55,6 +62,84 @@ class IncrementalMarkdownParser {
     }
 
     // Try to match block types in order of precedence
+
+    // Custom patterns (Unicode Identifier)
+    // Format: 󠄞content󠄞 (U+EB1E)
+    const kCustomIdentifier = '\uEB1E';
+    if (line.startsWith(kCustomIdentifier)) {
+      // Check if the line ends with the identifier (ignoring trailing whitespace?)
+      // Check if the line ends with the identifier (ignoring trailing whitespace?)
+      // The user said "trigger custom widget and end should have same".
+      // We assume the custom block content is usually on one line or spans until the closing identifier.
+
+      var content = line.substring(kCustomIdentifier.length);
+      var isClosed = false;
+
+      if (content.contains(kCustomIdentifier)) {
+        final endIndex = content.indexOf(kCustomIdentifier);
+        content = content.substring(0, endIndex);
+        isClosed = true;
+      } else {
+        // If it's not closed on this line, we might want to consume following lines until we find it.
+        // But for now let's implement basic single line or consume until closing.
+        // Let's implement multi-line consumption.
+        var j = index + 1;
+        final buffer = StringBuffer(content);
+
+        while (j < lines.length) {
+          final nextLine = lines[j];
+          if (nextLine.contains(kCustomIdentifier)) {
+            final endIdx = nextLine.indexOf(kCustomIdentifier);
+            buffer.write('\n${nextLine.substring(0, endIdx)}');
+            content = buffer.toString();
+            isClosed = true;
+            // index + 1 is next line, but here we advanced to j.
+            // But wait, if we consume lines, we need to update index.
+            index = j; // Update index to the line we finished on
+            break;
+          } else {
+            buffer.write('\n$nextLine');
+            j++;
+          }
+        }
+        if (!isClosed) {
+          content = buffer.toString();
+          index = j; // We consumed until j, which is length, or break.
+          // If j reached lines.length, we are at the end.
+        }
+      }
+
+      // Now we have the content. Find a matching pattern.
+      for (var i = 0; i < customPatterns.length; i++) {
+        final pattern = customPatterns[i];
+        final match = pattern.pattern.firstMatch(content);
+        if (match != null) {
+          final blockId =
+              _generateId(MarkdownBlockType.custom, content, blockIndex);
+
+          MarkdownBlock block;
+          if (pattern.blockBuilder != null) {
+            block = pattern.blockBuilder!(blockId, content, match);
+          } else {
+            block = MarkdownBlock(
+              id: blockId,
+              type: MarkdownBlockType.custom,
+              content: content,
+              metadata: {'patternIndex': i},
+            );
+          }
+          return _ParseResult(block, index + 1);
+        }
+      }
+
+      // If no pattern matches the content, what do we do?
+      // We could return a paragraph with the raw content,
+      // or a custom block that renders as error/fallback.
+      // For now, let's return a custom block with index -1 (generic).
+      // Or maybe just ignore it?
+      // Let's return a custom block but with no specific pattern index.
+      // The renderer will handle it (maybe show text?)
+    }
 
     // Thematic break (---, ***, ___)
     if (_isThematicBreak(line)) {

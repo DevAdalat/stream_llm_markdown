@@ -28,5 +28,6 @@ library;
 
 export 'src/parsing/markdown_block.dart'
     show ListItem, MarkdownBlock, MarkdownBlockType, TableAlignment, TableCell;
+export 'src/parsing/markdown_pattern.dart';
 export 'src/renderer/stream_markdown_renderer.dart' show StreamMarkdownRenderer;
 export 'src/theme/markdown_theme.dart';

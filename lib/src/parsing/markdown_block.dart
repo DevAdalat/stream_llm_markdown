@@ -12,6 +12,7 @@ enum MarkdownBlockType {
   thematicBreak,
   latex,
   html,
+  custom,
 }
 
 /// Represents a single block in the Markdown AST.

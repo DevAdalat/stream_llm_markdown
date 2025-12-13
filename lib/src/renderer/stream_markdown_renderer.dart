@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 
 import '../parsing/incremental_markdown_parser.dart';
 import '../parsing/markdown_block.dart';
+import '../parsing/markdown_pattern.dart';
 import '../render_objects/base/render_markdown_block.dart';
 import '../render_objects/mixins/selectable_text_mixin.dart';
 import '../theme/markdown_theme.dart';
@@ -34,8 +35,12 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
     this.selectionEnabled =
         false, // Disabled for now - selection implementation in progress
     this.characterDelay,
+    this.customPatterns = const [],
     super.key,
   });
+
+  /// Custom patterns to recognize and render.
+  final List<MarkdownPattern> customPatterns;
 
   /// Whether text selection is enabled.
   ///
@@ -103,6 +108,7 @@ class StreamMarkdownRenderer extends LeafRenderObjectWidget {
   RenderObject createRenderObject(BuildContext context) {
     return RenderStreamMarkdown(
       markdownStream: markdownStream,
+      customPatterns: customPatterns,
       characterDelay: characterDelay,
       theme: (theme ?? MarkdownTheme.light()).withDefaults(),
       onLinkTapped: onLinkTapped,
@@ -150,6 +156,7 @@ class RenderStreamMarkdown extends RenderBox {
   RenderStreamMarkdown({
     required Stream<String> markdownStream,
     required MarkdownTheme theme,
+    List<MarkdownPattern> customPatterns = const [],
     void Function(String url)? onLinkTapped,
     void Function(int index, bool checked)? onCheckboxTapped,
     bool showCursor = true,
@@ -174,12 +181,25 @@ class RenderStreamMarkdown extends RenderBox {
         _autoScrollToBottom = autoScrollToBottom,
         _selectionRegistrar = selectionRegistrar,
         _selectionEnabled = selectionEnabled,
-        _characterDelay = characterDelay {
+        _characterDelay = characterDelay,
+        _customPatterns = customPatterns,
+        _parser = IncrementalMarkdownParser(customPatterns: customPatterns) {
     _subscribeToStream(markdownStream);
   }
 
-  final _parser = IncrementalMarkdownParser();
+  IncrementalMarkdownParser _parser;
   StreamSubscription<String>? _subscription;
+
+  List<MarkdownPattern> get customPatterns => _customPatterns;
+  List<MarkdownPattern> _customPatterns;
+  set customPatterns(List<MarkdownPattern> value) {
+    if (_customPatterns == value) return;
+    _customPatterns = value;
+    _parser = IncrementalMarkdownParser(customPatterns: value);
+    _currentBlocks = _parser.parse(_currentMarkdown);
+    _updateChildren();
+  }
+
   String _currentMarkdown = '';
   String _pendingMarkdown = '';
   List<MarkdownBlock> _currentBlocks = [];
@@ -473,6 +493,7 @@ class RenderStreamMarkdown extends RenderBox {
           onLinkTapped: _onLinkTapped,
           onCheckboxTapped: _onCheckboxTapped,
           selectionRegistrar: registrar,
+          customPatterns: customPatterns,
         );
         newChildren.add(existingChild);
         newChildMap[block.id] = existingChild;
@@ -484,6 +505,7 @@ class RenderStreamMarkdown extends RenderBox {
           onLinkTapped: _onLinkTapped,
           onCheckboxTapped: _onCheckboxTapped,
           selectionRegistrar: registrar,
+          customPatterns: customPatterns,
         );
         adoptChild(child);
         newChildren.add(child);
@@ -561,6 +583,7 @@ class RenderStreamMarkdown extends RenderBox {
   void dispose() {
     _subscription?.cancel();
     _cursorTimer?.cancel();
+    _emitTimer?.cancel();
     _clearChildren();
     super.dispose();
   }

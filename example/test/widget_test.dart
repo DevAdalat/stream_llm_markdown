@@ -11,20 +11,28 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:example/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('Stream Markdown Renderer smoke test', (
+    WidgetTester tester,
+  ) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyApp());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verify that our app starts with "Start Stream" button.
+    expect(find.text('Start Stream'), findsOneWidget);
+    expect(find.text('Stream Markdown Demo'), findsOneWidget);
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    // Tap the 'Start Stream' button and trigger a frame.
+    await tester.tap(find.text('Start Stream'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify that streaming has started (button text changes).
+    expect(find.text('Streaming...'), findsOneWidget);
+
+    // Pump for enough time to let the stream complete (or at least process some chunks)
+    // The simulation runs for a few seconds.
+    await tester.pump(const Duration(seconds: 5));
+
+    // Pump one more time to ensure everything is settled
+    await tester.pumpAndSettle();
   });
 }

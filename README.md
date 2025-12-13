@@ -84,6 +84,34 @@ void main() {
 }
 ```
 
+### Custom Widgets via Patterns
+
+You can inject custom Flutter widgets into the markdown stream by defining patterns. Use the special Unicode delimiter `\uEB1E` (or `󠄞`) to wrap content that should be rendered as a custom block.
+
+```dart
+StreamMarkdownRenderer(
+  markdownStream: myStream,
+  customPatterns: [
+    MarkdownPattern(
+      // Match the content inside the delimiters
+      pattern: RegExp(r'^custom$'), 
+      createRenderObject: (block, theme) {
+        // Return a RenderBox for your custom widget
+        // Note: You must provide a RenderBox, not a Widget.
+        return RenderCustomBox();
+      },
+    ),
+  ],
+)
+```
+
+Then stream the content wrapped in the delimiter:
+
+```dart
+// Stream content with delimiters
+controller.add('Here is a custom widget: \uEB1Ecustom\uEB1E');
+```
+
 ## Supported Markdown Features
 
 - **Headers**: H1-H6
